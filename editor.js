@@ -206,6 +206,12 @@
     editor.addEventListener('blur', syncToTextarea);
 
     // 5) atajos
+    //    NOTA · DEUDA TÉCNICA: usamos document.execCommand('bold' / 'italic'
+    //    / 'insertHTML' / 'removeFormat'). Está marcado como deprecated en
+    //    el estándar pero todos los navegadores lo siguen implementando con
+    //    fidelidad. La alternativa (Selection + Range + DOM surgery) implica
+    //    reescribir el editor entero y es trabajo que no aporta funcionalidad
+    //    visible al usuario. Mantener hasta que algún navegador retire el API.
     editor.addEventListener('keydown', (e) => {
       const mod = e.ctrlKey || e.metaKey;
       if (!mod) return;

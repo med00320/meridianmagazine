@@ -1263,3 +1263,624 @@ textarea#pasteText.rt-hidden-source {
   }
   .report[data-variant="notebook"]::before { display: none; }
 }
+
+
+
+/* ============================================================
+   TABS DE HEADER · Mesa · Express · Número
+   ============================================================ */
+.hdr-tabs {
+  display: flex;
+  gap: 0;
+  align-self: stretch;
+  align-items: center;
+}
+.hdr-tab {
+  font-family: var(--f-meta);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  padding: 8px 16px;
+  border: 0.5pt solid var(--paper3);
+  border-bottom: none;
+  background: transparent;
+  color: var(--ink3);
+  cursor: pointer;
+  transition: color .15s, background .15s;
+  margin-bottom: -0.5pt;
+}
+.hdr-tab + .hdr-tab { border-left: none; }
+.hdr-tab:hover { color: var(--ink); }
+.hdr-tab.is-active {
+  color: var(--ink);
+  background: var(--paper);
+  border-color: var(--ochre);
+  border-bottom: 0.5pt solid var(--paper);
+  position: relative;
+  z-index: 2;
+}
+.hdr-tab.is-active::before {
+  content: "";
+  position: absolute;
+  left: 10px; right: 10px; top: 0;
+  height: 1.5pt;
+  background: var(--red);
+}
+
+/* ============================================================
+   VISTAS · ocultas con [hidden]
+   ============================================================ */
+.workspace[hidden] { display: none !important; }
+
+/* ============================================================
+   EXPRESS · subpestañas
+   ============================================================ */
+.exp-tabs {
+  display: flex;
+  gap: 0;
+  margin-bottom: 12px;
+  border-bottom: 0.5pt solid var(--paper3);
+}
+.exp-tab {
+  flex: 1;
+  font-family: var(--f-meta);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  padding: 8px 6px;
+  border: none;
+  background: transparent;
+  color: var(--ink3);
+  cursor: pointer;
+  border-bottom: 1.5pt solid transparent;
+  margin-bottom: -1pt;
+}
+.exp-tab.is-active {
+  color: var(--red);
+  border-bottom-color: var(--red);
+}
+.exp-tab:hover:not(.is-active) { color: var(--ink); }
+
+.exp-pane[hidden] { display: none; }
+
+/* Express textarea grande para artículos */
+.view-express textarea#expText {
+  width: 100%;
+  font-family: var(--f-mono);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--ink);
+  background: #fff;
+  border: 0.5pt solid var(--paper3);
+  padding: 10px 12px;
+  resize: vertical;
+  min-height: 220px;
+}
+.view-express textarea#expText:focus { outline: none; border-color: var(--red); }
+.view-express textarea#aiBrief {
+  width: 100%;
+  font-family: var(--f-body);
+  font-size: 13.5px;
+  line-height: 1.55;
+  background: #fff;
+  border: 0.5pt solid var(--paper3);
+  padding: 10px 12px;
+  resize: vertical;
+  min-height: 120px;
+}
+.view-express textarea#aiBrief:focus { outline: none; border-color: var(--red); }
+
+.view-express select {
+  width: 100%;
+  font-family: var(--f-body);
+  font-size: 13px;
+  background: #fff;
+  border: 0.5pt solid var(--paper3);
+  padding: 7px 10px;
+}
+
+/* ============================================================
+   ISSUE · cola lateral
+   ============================================================ */
+.iss-queue {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 320px;
+  overflow-y: auto;
+  border: 0.5pt solid var(--paper3);
+  background: #fff;
+  padding: 6px;
+}
+.iss-queue-empty {
+  font-family: var(--f-body);
+  font-style: italic;
+  font-size: 12px;
+  color: var(--ink3);
+  padding: 14px;
+  text-align: center;
+}
+.iss-queue-item {
+  display: grid;
+  grid-template-columns: 28px 1fr auto;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-left: 2pt solid var(--ochre);
+  background: var(--paper);
+}
+.iqi-num {
+  font-family: var(--f-meta);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  color: var(--red);
+  font-weight: 500;
+}
+.iqi-title {
+  font-family: var(--f-display);
+  font-size: 14px;
+  line-height: 1.2;
+  color: var(--ink);
+}
+.iqi-meta {
+  font-family: var(--f-meta);
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink3);
+  margin-top: 2px;
+}
+.iqi-actions {
+  display: flex;
+  gap: 2px;
+}
+.iqi-actions button {
+  width: 22px;
+  height: 22px;
+  border: 0.5pt solid var(--paper3);
+  background: #fff;
+  color: var(--ink3);
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1;
+}
+.iqi-actions button:hover { color: var(--red); border-color: var(--red); }
+
+/* ============================================================
+   ISSUE · documento (preview en pantalla y stage de impresión)
+   ============================================================ */
+.iss-doc {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  background: var(--paper);
+  max-width: 720px;
+  margin: 0 auto;
+  font-family: var(--f-body);
+  color: var(--ink);
+}
+
+/* Cada sección "página" en pantalla simula un A5 con sombra */
+.iss-cover, .iss-toc, .iss-article, .iss-back {
+  background: #fff;
+  border: 0.5pt solid var(--paper3);
+  box-shadow: 0 1px 0 rgba(0,0,0,0.04);
+  margin: 0 auto 18px;
+  width: 100%;
+  padding: 32mm 22mm;
+  position: relative;
+}
+
+/* ---------- portada ---------- */
+.iss-cover {
+  background: var(--ink);
+  color: var(--paper);
+  min-height: 80vh;
+  padding: 28mm 24mm;
+  overflow: hidden;
+}
+.iss-cover-grad {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(160deg, var(--ink) 0%, var(--ink) 35%, var(--red) 70%, var(--ochre) 110%);
+  opacity: 0.92;
+  z-index: 0;
+}
+.iss-cover > * { position: relative; z-index: 1; }
+.iss-cover-top {
+  display: flex;
+  justify-content: flex-end;
+}
+.iss-cover-folio {
+  font-family: var(--f-meta);
+  font-size: 9px;
+  letter-spacing: 0.22em;
+  color: var(--paper2);
+  text-transform: uppercase;
+}
+.iss-cover-mid {
+  margin-top: 8mm;
+  text-align: left;
+}
+.iss-cover-wordmark {
+  font-family: var(--f-display);
+  font-size: 64pt;
+  line-height: 1;
+  color: var(--paper);
+  letter-spacing: 0.005em;
+}
+.iss-cover-claim {
+  font-family: var(--f-meta);
+  font-size: 8.5pt;
+  letter-spacing: 0.32em;
+  color: var(--paper2);
+  margin-top: 6mm;
+}
+.iss-cover-theme {
+  margin-top: 30mm;
+  max-width: 90%;
+}
+.iss-cover-kicker {
+  font-family: var(--f-meta);
+  font-size: 9pt;
+  font-weight: 500;
+  letter-spacing: 0.32em;
+  color: var(--ochre2);
+  text-transform: uppercase;
+  margin-bottom: 8pt;
+}
+.iss-cover-title {
+  font-family: var(--f-display);
+  font-style: italic;
+  font-weight: 400;
+  font-size: 38pt;
+  line-height: 1.05;
+  color: var(--paper);
+  text-wrap: balance;
+}
+.iss-cover-title em { font-style: italic; }
+.iss-cover-ochre { color: var(--ochre2); font-style: italic; }
+.iss-cover-tagline {
+  font-family: var(--f-body);
+  font-style: italic;
+  font-size: 13pt;
+  color: var(--paper2);
+  margin-top: 10pt;
+  max-width: 80%;
+  line-height: 1.4;
+}
+.iss-cover-foot {
+  position: absolute;
+  bottom: 24mm;
+  left: 24mm;
+  right: 24mm;
+  z-index: 2;
+}
+.iss-cover-collab {
+  font-family: var(--f-meta);
+  font-size: 8pt;
+  letter-spacing: 0.22em;
+  color: var(--paper2);
+  text-transform: uppercase;
+  border-top: 0.5pt solid var(--ochre2);
+  padding-top: 6pt;
+}
+
+/* ---------- sumario ---------- */
+.iss-toc-head {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: baseline;
+  gap: 14px;
+  border-bottom: 0.5pt solid var(--ochre);
+  padding-bottom: 12pt;
+  margin-bottom: 16pt;
+}
+.iss-toc-mark {
+  color: var(--red);
+  font-size: 14pt;
+}
+.iss-toc-h2 {
+  font-family: var(--f-display);
+  font-style: italic;
+  font-size: 30pt;
+  font-weight: 400;
+  color: var(--ink);
+  line-height: 1;
+}
+.iss-toc-folio {
+  font-family: var(--f-meta);
+  font-size: 9pt;
+  letter-spacing: 0.22em;
+  color: var(--ink3);
+  text-transform: uppercase;
+}
+.iss-toc-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 12pt;
+  padding: 0;
+  margin: 0;
+}
+.iss-toc-item {
+  display: grid;
+  grid-template-columns: 36pt 1fr;
+  gap: 14px;
+  padding: 6pt 0;
+  border-bottom: 0.5pt dashed var(--paper3);
+}
+.iss-toc-num {
+  font-family: var(--f-meta);
+  font-size: 11pt;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  color: var(--ochre);
+  padding-top: 4pt;
+}
+.iss-toc-kicker {
+  font-family: var(--f-meta);
+  font-size: 8pt;
+  letter-spacing: 0.22em;
+  color: var(--red);
+  text-transform: uppercase;
+  margin-bottom: 2pt;
+}
+.iss-toc-title {
+  font-family: var(--f-display);
+  font-style: italic;
+  font-weight: 400;
+  font-size: 18pt;
+  color: var(--ink);
+  line-height: 1.15;
+  margin-bottom: 3pt;
+  text-wrap: pretty;
+}
+.iss-toc-author {
+  font-family: var(--f-meta);
+  font-size: 7.5pt;
+  letter-spacing: 0.22em;
+  color: var(--ink3);
+  text-transform: uppercase;
+}
+
+/* ---------- artículo (cuerpo del número) ---------- */
+.iss-article { padding: 28mm 22mm; }
+.iss-art-head { margin-bottom: 14pt; }
+.iss-kicker {
+  font-family: var(--f-meta);
+  font-size: 8pt;
+  font-weight: 500;
+  letter-spacing: 0.28em;
+  color: var(--red);
+  text-transform: uppercase;
+  margin-bottom: 8pt;
+}
+.iss-title {
+  font-family: var(--f-display);
+  font-style: italic;
+  font-weight: 400;
+  font-size: 30pt;
+  line-height: 1.05;
+  color: var(--ink);
+  margin: 0 0 8pt 0;
+  text-wrap: pretty;
+}
+.iss-subtitle {
+  font-family: var(--f-body);
+  font-style: italic;
+  font-size: 13pt;
+  color: var(--ink2);
+  line-height: 1.4;
+  margin: 0 0 10pt 0;
+  text-wrap: pretty;
+}
+.iss-byline {
+  font-family: var(--f-meta);
+  font-size: 7pt;
+  letter-spacing: 0.24em;
+  color: var(--red);
+  text-transform: uppercase;
+  margin: 0 0 8pt 0;
+}
+.iss-rule {
+  width: 18mm;
+  height: 0.5pt;
+  background: var(--ochre);
+  margin: 10pt 0 18pt 0;
+}
+.iss-body {
+  font-family: var(--f-body);
+  font-size: 10.5pt;
+  line-height: 1.5;
+  color: var(--ink);
+}
+.iss-body p {
+  margin: 0 0 8pt 0;
+  text-align: justify;
+  hyphens: auto;
+  font-feature-settings: "liga", "onum";
+  text-wrap: pretty;
+}
+.iss-body p.iss-capitular::first-letter {
+  font-family: var(--f-display);
+  font-size: 48pt;
+  line-height: 0.85;
+  float: left;
+  padding: 4pt 8pt 0 0;
+  color: var(--ink);
+}
+.iss-body h2.iss-inter {
+  font-family: var(--f-body);
+  font-variant: small-caps;
+  font-weight: 500;
+  font-size: 11pt;
+  color: var(--red);
+  letter-spacing: 0.04em;
+  margin: 14pt 0 6pt 0;
+  line-height: 1.2;
+}
+.iss-body p.iss-sep {
+  text-align: center;
+  color: var(--ochre);
+  letter-spacing: 0.5em;
+  margin: 12pt 0;
+}
+.iss-body blockquote.iss-cita {
+  border-left: 1.8pt solid var(--ochre);
+  padding: 4pt 12pt;
+  margin: 12pt 8mm;
+  font-style: italic;
+  color: var(--ink);
+}
+.iss-body p.iss-diamante {
+  text-align: center;
+  color: var(--red);
+  font-size: 14pt;
+  margin: 16pt 0 0 0;
+}
+
+/* ---------- contraportada ---------- */
+.iss-back {
+  background: var(--ink);
+  color: var(--paper);
+  min-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 30mm 24mm;
+}
+.iss-back-mid { text-align: center; margin: auto 0; }
+.iss-back-mark {
+  color: var(--ochre2);
+  font-size: 18pt;
+  margin-bottom: 14pt;
+}
+.iss-back-quote {
+  font-family: var(--f-body);
+  font-style: italic;
+  font-size: 17pt;
+  line-height: 1.4;
+  color: var(--paper);
+  max-width: 100mm;
+  margin: 0 auto;
+  padding: 0;
+  border: none;
+  text-wrap: pretty;
+}
+.iss-back-attrib {
+  font-family: var(--f-meta);
+  font-size: 9pt;
+  letter-spacing: 0.22em;
+  color: var(--paper2);
+  margin-top: 14pt;
+  text-transform: uppercase;
+}
+.iss-back-foot {
+  text-align: center;
+  border-top: 0.5pt solid var(--ochre2);
+  padding-top: 14pt;
+}
+.iss-back-wordmark {
+  font-family: var(--f-display);
+  font-size: 28pt;
+  line-height: 1;
+  color: var(--paper);
+  margin-bottom: 8pt;
+}
+.iss-back-colophon {
+  font-family: var(--f-meta);
+  font-size: 8pt;
+  letter-spacing: 0.18em;
+  color: var(--paper2);
+  text-transform: uppercase;
+  margin-bottom: 4pt;
+}
+.iss-back-site {
+  font-family: var(--f-meta);
+  font-size: 9pt;
+  letter-spacing: 0.32em;
+  color: var(--ochre2);
+  text-transform: uppercase;
+}
+
+/* ---------- preview Express en pantalla ---------- */
+.iss-preview-single .iss-article {
+  border: 0.5pt solid var(--paper3);
+}
+
+/* ============================================================
+   IMPRESIÓN A5 · contextual al modo (data-mode en <body>)
+   ------------------------------------------------------------
+   - body[data-mode="mesa"]    imprime el .report (ya cubierto arriba)
+   - body[data-mode="express"] imprime el printStage con el artículo
+   - body[data-mode="issue"]   imprime el printStage con el número
+   ============================================================ */
+@media print {
+  /* Comunes a Express / Issue · oculta toda la UI excepto printStage */
+  body.app[data-mode="express"] .workspace,
+  body.app[data-mode="express"] .app-header,
+  body.app[data-mode="issue"]   .workspace,
+  body.app[data-mode="issue"]   .app-header,
+  body.app[data-mode="express"] .toast-stack,
+  body.app[data-mode="issue"]   .toast-stack,
+  body.app[data-mode="express"] .synth-overlay,
+  body.app[data-mode="issue"]   .synth-overlay {
+    display: none !important;
+  }
+  body.app[data-mode="express"] #printStage,
+  body.app[data-mode="issue"]   #printStage {
+    position: static !important;
+    left: 0 !important;
+    width: auto !important;
+    background: #fff !important;
+  }
+
+  /* Cada "página" del documento de número rompe a A5 */
+  .iss-cover, .iss-toc, .iss-article, .iss-back {
+    box-shadow: none !important;
+    border: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: transparent !important;
+    page-break-after: always;
+    break-after: page;
+    width: auto !important;
+    min-height: auto !important;
+  }
+  .iss-back { page-break-after: auto; break-after: auto; }
+
+  /* Portada y contraportada conservan fondo tinta en impresión.
+     El gradiente sigue funcionando porque WebKit/Blink imprimen
+     fondos cuando print-color-adjust:exact. */
+  .iss-cover, .iss-back {
+    background: var(--ink) !important;
+    color: var(--paper) !important;
+    padding: 14mm !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    min-height: calc(210mm - 28mm) !important;   /* alto A5 menos márgenes */
+  }
+  .iss-cover-grad {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .iss-back-quote { font-size: 14pt; }
+  .iss-cover-wordmark { font-size: 48pt; }
+  .iss-cover-title { font-size: 30pt; }
+
+  /* Sumario y cuerpo · padding tipográfico A5 */
+  .iss-toc, .iss-article {
+    padding: 0 !important;
+  }
+  .iss-toc { page-break-after: always; }
+  .iss-article { page-break-after: always; }
+
+  /* Evita que un artículo se corte mal */
+  .iss-art-head, .iss-toc-head { page-break-after: avoid; }
+  .iss-body h2.iss-inter { page-break-after: avoid; }
+  .iss-body blockquote.iss-cita,
+  .iss-body p.iss-sep,
+  .iss-body p.iss-diamante { page-break-inside: avoid; }
+}

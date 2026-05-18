@@ -36,33 +36,39 @@
 
 <link rel="stylesheet" href="styles.css" />
 </head>
-<body class="app">
+<body class="app" data-mode="mesa">
 
 <!-- ============================================================
-     HEADER
+     HEADER · pestañas + IA + acciones
      ============================================================ -->
 <header class="app-header" data-screen-label="Header">
   <div class="hdr-left">
     <div class="wordmark">Meridian</div>
     <div class="claim">MESA DE REDACCIÓN · CRÍTICA EDITORIAL · v1</div>
   </div>
+
+  <nav class="hdr-tabs" role="tablist" aria-label="Modos de trabajo">
+    <button class="hdr-tab is-active" role="tab" aria-selected="true"  data-tab="mesa"   type="button">Mesa</button>
+    <button class="hdr-tab"           role="tab" aria-selected="false" data-tab="express" type="button">Express</button>
+    <button class="hdr-tab"           role="tab" aria-selected="false" data-tab="issue"   type="button">Número</button>
+  </nav>
+
   <div class="hdr-right">
     <span class="claude-badge" id="aiBadge" title="Pulsa para configurar la IA">IA · comprobando…</span>
     <button class="hdr-btn ghost" id="btnReset" type="button">Reiniciar</button>
-    <button class="hdr-btn" id="btnPrint" type="button" disabled>Imprimir A5</button>
+    <button class="hdr-btn"       id="btnPrint" type="button" disabled>Imprimir A5</button>
   </div>
 </header>
 
 <!-- ============================================================
-     WORKSPACE · dos columnas
+     VISTA MESA · workspace original
      ============================================================ -->
-<div class="workspace mesa">
+<div class="workspace mesa view-mesa" data-view="mesa">
 
-  <!-- ===== COLUMNA IZQUIERDA · texto en bruto ===== -->
   <aside class="sidebar mesa-left" data-screen-label="Texto fuente">
     <section class="side-block">
       <h2 class="kicker">Texto a criticar</h2>
-      <p class="helper">Carga un archivo o pega el texto. Un solo texto por sesión; el multi-artículo llega después.</p>
+      <p class="helper">Carga un archivo o pega el texto. Un solo texto por sesión.</p>
 
       <label class="dropzone" id="dropzone" tabindex="0">
         <input id="fileInput" type="file" accept=".pdf,.docx,.txt,.md,application/pdf,text/plain,text/markdown" hidden />
@@ -114,7 +120,6 @@
     </section>
   </aside>
 
-  <!-- ===== COLUMNA CENTRAL · barra de acción + informe ===== -->
   <main class="main-col">
     <div class="action-bar">
       <button class="btn primary big" id="btnCritique" type="button" disabled>
@@ -136,10 +141,13 @@
         <strong>El informe está listo.</strong>
         <span id="ebStats">—</span>
       </div>
-      <button class="btn ghost" id="btnExportTxt" type="button" title="Aplica las propuestas de la Mesa al texto original y descarga el .txt corregido">↓ Descargar texto corregido</button>
-      <button class="btn ghost" id="btnExportMd" type="button" title="Descarga texto + informe en un .md, con las fricciones detalladas">↓ Descargar .md con notas</button>
-      <button class="btn ghost small" id="btnReCritique" type="button" title="Aplica las propuestas al texto y vuelve a pasarlo por la mesa para un segundo informe">↻ Aplicar y re-criticar</button>
-      <button class="btn primary" id="btnHandoff" type="button" title="Aplica las propuestas y abre el sintetizador en modo Maquetar con el texto cargado">Maquetar en el sintetizador →</button>
+      <button class="btn ghost"       id="btnExportTxt"   type="button" title="Aplica las propuestas y descarga .txt corregido">↓ Texto corregido</button>
+      <button class="btn ghost"       id="btnExportMd"    type="button" title="Texto + informe en .md, con fricciones detalladas">↓ .md con notas</button>
+      <button class="btn ghost"       id="btnExportDoc"   type="button" title="Aplica las propuestas y descarga el texto corregido como .doc">↓ Word (.doc)</button>
+      <button class="btn ghost"       id="btnExportPdfMesa" type="button" title="Imprime el informe en A5; en Chrome elige Guardar como PDF">↓ PDF</button>
+      <button class="btn ghost small" id="btnReCritique"  type="button" title="Aplica las propuestas y vuelve a pasarlo por la mesa">↻ Re-criticar</button>
+      <button class="btn primary"     id="btnSendToIssue" type="button" title="Envía el texto corregido al Número como un artículo (sin volver a pasar por revisión)">→ Enviar al Número</button>
+      <button class="btn ghost small" id="btnHandoff"     type="button" hidden title="Sólo si está integrado con el sintetizador padre">Maquetar →</button>
     </div>
 
     <div class="report-frame" id="reportFrame">
@@ -154,7 +162,231 @@
   </main>
 </div>
 
-<!-- Stage de impresión: A5, fuera del flujo visible, sólo para Cmd+P -->
+<!-- ============================================================
+     VISTA EXPRESS · sin revisión
+     ============================================================ -->
+<div class="workspace mesa view-express" data-view="express" hidden>
+
+  <aside class="sidebar mesa-left">
+    <section class="side-block">
+      <h2 class="kicker">Mesa Express · sin revisión</h2>
+      <p class="helper">Genera o pega un artículo largo. La mesa lo divide en secciones y lo añade al número, sin pasar por crítica.</p>
+
+      <div class="exp-tabs" role="tablist">
+        <button class="exp-tab is-active" data-exp="paste" role="tab" type="button">Pegar / subir</button>
+        <button class="exp-tab"           data-exp="ai"    role="tab" type="button">Generar IA</button>
+      </div>
+    </section>
+
+    <!-- Subpestaña PEGAR / SUBIR -->
+    <section class="side-block exp-pane" data-exp-pane="paste">
+      <label class="dropzone" id="expDropzone" tabindex="0">
+        <input id="expFileInput" type="file" accept=".pdf,.docx,.txt,.md,application/pdf,text/plain,text/markdown" hidden />
+        <strong>Arrastra archivo</strong>
+        <span>o pulsa para elegir</span>
+        <em class="dz-formats">PDF · DOCX · TXT · MD</em>
+      </label>
+
+      <div class="field" style="margin-top:14px;">
+        <label for="expTitle">Título del artículo</label>
+        <input id="expTitle" type="text" placeholder="Ej. La rojez vespertina" />
+      </div>
+      <div class="field">
+        <label for="expAuthor">Firma</label>
+        <input id="expAuthor" type="text" placeholder="Nombre Apellido" />
+      </div>
+      <div class="field">
+        <label for="expIssue">Kicker (sección)</label>
+        <input id="expIssue" type="text" placeholder="ENSAYO · 03 · CORMAC McCARTHY" />
+      </div>
+
+      <h2 class="kicker" style="margin-top:14px;">Texto del artículo</h2>
+      <textarea id="expText" rows="12" placeholder="Pega aquí el artículo completo. Si trae cabeceras `## Intertítulo` se respetan; si no, la mesa las pondrá."></textarea>
+      <div class="paste-actions">
+        <span class="paste-stat" id="expPasteStat">0 palabras</span>
+      </div>
+
+      <button class="btn primary" id="btnExpImport" type="button" style="margin-top:10px;width:100%;">
+        <span class="bp-mark">◆</span> Estructurar y añadir al número
+      </button>
+    </section>
+
+    <!-- Subpestaña GENERAR IA -->
+    <section class="side-block exp-pane" data-exp-pane="ai" hidden>
+      <div class="field">
+        <label for="aiTitle">Título sugerido (opcional)</label>
+        <input id="aiTitle" type="text" placeholder="Lo elegirá el modelo si lo dejas vacío" />
+      </div>
+      <div class="field">
+        <label for="aiAuthor">Firma</label>
+        <input id="aiAuthor" type="text" placeholder="Nombre Apellido" />
+      </div>
+      <div class="field">
+        <label for="aiIssue">Kicker</label>
+        <input id="aiIssue" type="text" placeholder="ENSAYO · 03 · TEMA" />
+      </div>
+
+      <div class="field">
+        <label for="aiBrief">Encargo</label>
+        <textarea id="aiBrief" rows="6" placeholder="Describe el artículo: tema, ángulo, obras o autores a tratar, lo que NO debe aparecer. Cuanto más concreto, mejor."></textarea>
+      </div>
+
+      <div class="field">
+        <label for="aiWords">Extensión</label>
+        <select id="aiWords">
+          <option value="1500">1.500 palabras · breve</option>
+          <option value="2000" selected>2.000 palabras · estándar</option>
+          <option value="2500">2.500 palabras · extenso</option>
+          <option value="3000">3.000 palabras · ensayo</option>
+        </select>
+      </div>
+
+      <button class="btn primary" id="btnAiGenerate" type="button" style="margin-top:6px;width:100%;">
+        <span class="bp-mark">◆</span> Redactar al estilo Meridian
+      </button>
+      <p class="helper" style="margin-top:8px;">
+        Usa el manual de marca embebido. No pasa por crítica: el resultado va directo al número.
+      </p>
+    </section>
+
+    <section class="side-block log-block">
+      <h2 class="kicker">Registro</h2>
+      <div class="log-box" id="expLogBox"></div>
+    </section>
+  </aside>
+
+  <main class="main-col">
+    <div class="action-bar">
+      <div class="eb-text">
+        <strong>Vista previa del artículo</strong>
+        <span id="expPreviewStats">Aún no hay artículo cargado.</span>
+      </div>
+      <div class="action-meta">
+        <button class="btn ghost"       id="btnExpExportDoc" type="button" disabled>↓ Word (.doc)</button>
+        <button class="btn ghost"       id="btnExpExportMd"  type="button" disabled>↓ .md</button>
+        <button class="btn ghost small" id="btnExpDiscard"   type="button" disabled>Descartar</button>
+        <button class="btn ghost small" id="btnExpToMesa"    type="button" disabled title="Manda este artículo a la Mesa para revisarlo">→ A la Mesa</button>
+      </div>
+    </div>
+
+    <div class="report-frame" id="expPreview">
+      <div class="empty-state">
+        <div class="empty-mark">◆</div>
+        <h3>Aún no hay artículo</h3>
+        <p>Pega texto largo o redacta uno con IA. Aparecerá aquí estructurado en secciones,
+           listo para añadirse al número.</p>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- ============================================================
+     VISTA NÚMERO · maquetador
+     ============================================================ -->
+<div class="workspace mesa view-issue" data-view="issue" hidden>
+
+  <aside class="sidebar mesa-left">
+    <section class="side-block">
+      <h2 class="kicker">Número en preparación</h2>
+      <div class="field">
+        <label for="issNumber">N.º</label>
+        <input id="issNumber" type="text" placeholder="01" />
+      </div>
+      <div class="field">
+        <label for="issSeason">Estación</label>
+        <select id="issSeason">
+          <option>Primavera</option>
+          <option>Verano</option>
+          <option>Otoño</option>
+          <option>Invierno</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="issYear">Año</label>
+        <input id="issYear" type="text" placeholder="2026" />
+      </div>
+    </section>
+
+    <section class="side-block">
+      <h2 class="kicker">Portada</h2>
+      <div class="field">
+        <label for="issTheme">Tema del número</label>
+        <input id="issTheme" type="text" placeholder="McCarthy y la frontera" />
+      </div>
+      <div class="field">
+        <label for="issThemeAuthor">Autor monográfico (acento ocre)</label>
+        <input id="issThemeAuthor" type="text" placeholder="McCarthy" />
+      </div>
+      <div class="field">
+        <label for="issTagline">Tagline</label>
+        <input id="issTagline" type="text" placeholder="Lectura lenta · literatura norteamericana XX y XXI" />
+      </div>
+      <button class="btn ghost small" id="btnIssAutoCopy" type="button" style="width:100%;">
+        ◆ Auto-copy con IA
+      </button>
+      <p class="helper" style="margin-top:6px;font-size:11px;">
+        Pide al modelo tema, tagline y frase de cierre a partir de los artículos en cola.
+      </p>
+    </section>
+
+    <section class="side-block">
+      <h2 class="kicker">Contraportada</h2>
+      <div class="field">
+        <label for="issClosingQuote">Cita de cierre</label>
+        <textarea id="issClosingQuote" rows="3" placeholder="Frase italic en Garamond, evocadora, no recapitulativa."></textarea>
+      </div>
+      <div class="field">
+        <label for="issClosingAttrib">Atribución (opcional)</label>
+        <input id="issClosingAttrib" type="text" placeholder="Cormac McCarthy" />
+      </div>
+      <div class="field">
+        <label for="issColophon">Colofón</label>
+        <input id="issColophon" type="text" placeholder="© Meridian Magazine · todos los derechos reservados" />
+      </div>
+      <div class="field">
+        <label for="issSite">URL del sitio</label>
+        <input id="issSite" type="text" placeholder="meridianmagazine.es" />
+      </div>
+    </section>
+
+    <section class="side-block">
+      <h2 class="kicker">Cola de artículos</h2>
+      <div id="issQueue" class="iss-queue">
+        <div class="iss-queue-empty">El número está vacío. Añade artículos desde Mesa o Express.</div>
+      </div>
+      <button class="btn ghost small" id="btnIssClear" type="button" style="margin-top:10px;width:100%;">
+        Vaciar número
+      </button>
+    </section>
+  </aside>
+
+  <main class="main-col">
+    <div class="action-bar">
+      <div class="eb-text">
+        <strong>Maquetador del número</strong>
+        <span id="issStats">—</span>
+      </div>
+      <div class="action-meta">
+        <button class="btn ghost" id="btnIssRefresh" type="button">↻ Refrescar</button>
+        <button class="btn ghost" id="btnIssExportDoc" type="button">↓ Word (.doc)</button>
+        <button class="btn primary" id="btnIssPrint" type="button">
+          <span class="bp-mark">◆</span> Imprimir / PDF
+        </button>
+      </div>
+    </div>
+
+    <div class="report-frame" id="issPreview">
+      <div class="empty-state">
+        <div class="empty-mark">◆</div>
+        <h3>Sin artículos en el número</h3>
+        <p>Cuando añadas piezas desde la Mesa o Express, aparecerá aquí la portada,
+           el sumario y la contraportada.</p>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Stage de impresión: A5, fuera del flujo visible -->
 <div id="printStage" aria-hidden="true"></div>
 
 <!-- Toasts -->
@@ -167,6 +399,10 @@
 <script src="critic.js"></script>
 <script src="layout.js"></script>
 <script src="applier.js"></script>
+<script src="brand.js"></script>
+<script src="sectioner.js"></script>
+<script src="express.js"></script>
+<script src="issue.js"></script>
 <script src="editor.js"></script>
 <script src="app.js"></script>
 
