@@ -1233,6 +1233,11 @@
     $('btnCritique').addEventListener('click', runCritique);
     $('btnPrint').addEventListener('click', doPrint);
     $('btnReset').addEventListener('click', doReset);
+    $('btnTweaks').addEventListener('click', () => {
+      const panel = document.getElementById('__tweaks');
+      const isVisible = panel && panel.style.display !== 'none';
+      showTweaks(!isVisible);
+    });
 
     $('btnExportTxt').addEventListener('click', () => exportCorrected('txt'));
     $('btnExportMd').addEventListener('click',  () => exportCorrected('md'));
