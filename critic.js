@@ -336,6 +336,8 @@ REGLAS NO NEGOCIABLES:
   global.MesaCritic = {
     PROVIDERS, PERSONAS, SEVERITIES, LENGTHS, LANGUAGES,
     getConfig, setConfig, clearConfig, hasLLM, currentLabel,
-    callLLM, tryParseJSON, critique, buildPrompt
+    callLLM, tryParseJSON, critique, buildPrompt,
+    // helpers reutilizables por otros módulos (sources.js):
+    diagnoseNetworkError, formatHttpError
   };
 })(window);

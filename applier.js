@@ -116,6 +116,22 @@
         if (f.cita)       lines.push(`> ${f.cita}`);
         if (f.comentario) lines.push(`${f.comentario}`);
         if (f.propuesta)  lines.push(`→ ${f.propuesta}`);
+        // Fuentes generadas para esta fricción (si las hay)
+        const fu = f._fuentes && f._fuentes.data && f._fuentes.data.fuentes;
+        if (Array.isArray(fu) && fu.length) {
+          lines.push('');
+          lines.push(`*Fuentes sugeridas${f._fuentes.providerLabel ? ' · vía ' + f._fuentes.providerLabel : ''}:*`);
+          fu.forEach((s, n) => {
+            const ref = [s.autor, s.obra ? `*${s.obra}*` : '', (s['año'] && s['año'] !== '—') ? `(${s['año']})` : '']
+              .filter(Boolean).join(', ');
+            lines.push(`  ${String(n + 1).padStart(2, '0')}. **${(s.tipo || '').replace('_', ' ')}** · ${ref} · cert. ${s.certeza || 'media'}`);
+            if (s.fragmento_o_idea) lines.push(`     > ${s.fragmento_o_idea}`);
+            if (s.porque)           lines.push(`     ↳ ${s.porque}`);
+          });
+        } else if (f._fuentes && f._fuentes.data && f._fuentes.data.nota_general) {
+          lines.push('');
+          lines.push(`*Fuentes:* ${f._fuentes.data.nota_general}`);
+        }
         lines.push('');
       });
     }

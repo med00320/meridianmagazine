@@ -1263,3 +1263,241 @@ textarea#pasteText.rt-hidden-source {
   }
   .report[data-variant="notebook"]::before { display: none; }
 }
+
+
+/* ============================================================
+   PILL CLICKABLE · proveedor de fuentes en action-bar
+   ============================================================ */
+.am-pill.am-pill-clickable {
+  cursor: pointer;
+  transition: opacity .15s, color .15s, border-color .15s;
+}
+.am-pill.am-pill-clickable:hover { opacity: 0.78; }
+.am-pill.am-pill-clickable.ok    { color: var(--ochre); border-color: var(--ochre); }
+.am-pill.am-pill-clickable.warn  { color: var(--red);   border-color: var(--red); }
+
+/* ============================================================
+   FRICCIÓN · footer (botón "buscar fuentes")
+   ============================================================ */
+.rep-fr-foot {
+  margin-top: 12px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.rep-fr-srcbtn {
+  font-family: var(--f-meta);
+  font-size: 9.5px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  background: transparent;
+  color: var(--ink3);
+  border: 0.5pt solid var(--paper3);
+  padding: 5px 10px;
+  cursor: pointer;
+  transition: color .15s, border-color .15s, background .15s;
+}
+.rep-fr-srcbtn:hover {
+  color: var(--red);
+  border-color: var(--red);
+  background: rgba(255,255,255,0.4);
+}
+
+/* ============================================================
+   FUENTES SUGERIDAS · bloque inline dentro de cada fricción
+   ============================================================ */
+.rep-fr-sources:empty { display: none; }
+
+.rep-srcs {
+  margin-top: 14px;
+  padding: 12px 14px;
+  background: var(--paper2);
+  border: 0.5pt solid var(--paper3);
+  border-left: 2pt solid var(--ochre);
+  display: grid;
+  gap: 10px;
+}
+.rep-srcs.error {
+  border-left-color: var(--red);
+}
+.rep-srcs-head {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-family: var(--f-meta);
+  font-size: 9px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ochre);
+}
+.rep-srcs-kicker { font-weight: 600; }
+.rep-srcs-prov   { color: var(--ink3); letter-spacing: 0.12em; text-transform: none; font-style: italic; font-size: 10px; }
+.rep-srcs-status { color: var(--red); letter-spacing: 0.12em; }
+.rep-srcs-action {
+  margin-left: auto;
+  background: none;
+  border: 0;
+  font-family: var(--f-meta);
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  color: var(--ink3);
+  cursor: pointer;
+  text-transform: uppercase;
+  padding: 2px 4px;
+}
+.rep-srcs-action + .rep-srcs-action { margin-left: 4px; }
+.rep-srcs-action:hover { color: var(--red); }
+
+.rep-srcs-loading {
+  font-family: var(--f-mono);
+  color: var(--ochre);
+  letter-spacing: 0.6em;
+  text-align: center;
+  padding: 8px 0;
+  animation: srcsBlink 1.4s ease-in-out infinite;
+}
+@keyframes srcsBlink {
+  0%,100% { opacity: 0.35; }
+  50%     { opacity: 1; }
+}
+
+.rep-srcs-err {
+  font-family: var(--f-mono);
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--red);
+  white-space: pre-wrap;
+  background: rgba(139,45,26,0.06);
+  padding: 8px 10px;
+  margin: 0;
+}
+
+.rep-srcs-empty {
+  font-family: var(--f-body);
+  font-style: italic;
+  font-size: 13px;
+  color: var(--ink3);
+  margin: 0;
+}
+
+.rep-srcs-note {
+  font-family: var(--f-body);
+  font-style: italic;
+  font-size: 12.5px;
+  color: var(--ink3);
+  margin: 0;
+  padding-top: 4px;
+  border-top: 0.5pt dotted var(--paper3);
+}
+
+.rep-srcs-warn {
+  font-family: var(--f-meta);
+  font-size: 9.5px;
+  letter-spacing: 0.06em;
+  color: var(--ink3);
+  font-style: italic;
+  border-top: 0.5pt dotted var(--paper3);
+  padding-top: 6px;
+}
+
+/* Tarjeta de fuente individual */
+.rep-src {
+  background: #fff;
+  border: 0.5pt solid var(--paper3);
+  padding: 10px 12px;
+  display: grid;
+  gap: 6px;
+}
+.rep-src[data-cert="baja"]  { border-left: 2pt solid var(--red);   }
+.rep-src[data-cert="media"] { border-left: 2pt solid var(--ochre); }
+.rep-src[data-cert="alta"]  { border-left: 2pt solid var(--ink2);  }
+
+.rep-src-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  font-family: var(--f-meta);
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--ink3);
+}
+.rep-src-n    { color: var(--ochre); font-weight: 600; }
+.rep-src-tipo { color: var(--red); }
+.rep-src-cert { margin-left: auto; font-family: var(--f-mono); font-size: 9.5px; letter-spacing: 0.05em; }
+
+.rep-src-ref {
+  font-family: var(--f-body);
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--ink);
+}
+.rep-src-anyo {
+  font-family: var(--f-mono);
+  font-size: 11px;
+  color: var(--ink3);
+  letter-spacing: 0.04em;
+}
+.rep-src-frag {
+  font-family: var(--f-body);
+  font-style: italic;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--ink2);
+  padding-left: 12px;
+  border-left: 1pt solid var(--paper3);
+  margin: 0;
+}
+.rep-src-why {
+  font-family: var(--f-body);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink2);
+  margin: 0;
+}
+.rep-src-why-lbl {
+  font-family: var(--f-meta);
+  font-size: 8.5px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--red);
+  margin-right: 6px;
+}
+
+/* Variante "modern" · estilo más limpio */
+.report[data-variant="modern"] .rep-srcs       { background: #fff; border-left-color: var(--ink); }
+.report[data-variant="modern"] .rep-src        { border-left-color: var(--ink2); }
+.report[data-variant="modern"] .rep-fr-srcbtn  { border-color: var(--ink2); color: var(--ink2); }
+.report[data-variant="modern"] .rep-fr-srcbtn:hover { color: var(--ink); border-color: var(--ink); }
+
+/* Variante "notebook" · marca de corrector */
+.report[data-variant="notebook"] .rep-srcs {
+  background: rgba(255,255,255,0.55);
+  border-left-color: var(--red);
+}
+.report[data-variant="notebook"] .rep-src-frag {
+  font-family: var(--f-body);
+}
+
+/* ============================================================
+   IMPRESIÓN · oculta botones interactivos pero conserva fuentes
+   ============================================================ */
+@media print {
+  .rep-fr-foot,
+  .rep-srcs-action,
+  .rep-srcs-loading,
+  .rep-srcs-err {
+    display: none !important;
+  }
+  .rep-srcs {
+    background: transparent;
+    border-left: 0.75pt solid #888;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+  .rep-src {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+}
