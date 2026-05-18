@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Meridian · Mesa de redacción</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+  href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
+  rel="stylesheet"
+/>
+
+<!-- Bloquea drag/drop a nivel window ANTES de cargar nada (no soltar PDF en la pestaña) -->
+<script>
+(function () {
+  var prevent = function (e) { e.preventDefault(); };
+  ['dragenter','dragover','dragleave','drop'].forEach(function (ev) {
+    window.addEventListener(ev, prevent, false);
+  });
+})();
+</script>
+
+<!-- pdf.js (UMD, compatible con file://) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+  if (window.pdfjsLib && window.pdfjsLib.GlobalWorkerOptions) {
+    window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+      'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  }
+</script>
+
+<!-- mammoth para .docx → texto -->
+<script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js"></script>
+
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body class="app">
+
+<!-- ============================================================
+     HEADER
+     ============================================================ -->
+<header class="app-header" data-screen-label="Header">
+  <div class="hdr-left">
+    <div class="wordmark">Meridian</div>
+    <div class="claim">MESA DE REDACCIÓN · CRÍTICA EDITORIAL · v1</div>
+  </div>
+  <div class="hdr-right">
+    <span class="claude-badge" id="aiBadge" title="Pulsa para configurar la IA">IA · comprobando…</span>
+    <button class="hdr-btn ghost" id="btnReset" type="button">Reiniciar</button>
+    <button class="hdr-btn" id="btnPrint" type="button" disabled>Imprimir A5</button>
+  </div>
+</header>
+
+<!-- ============================================================
+     WORKSPACE · dos columnas
+     ============================================================ -->
+<div class="workspace mesa">
+
+  <!-- ===== COLUMNA IZQUIERDA · texto en bruto ===== -->
+  <aside class="sidebar mesa-left" data-screen-label="Texto fuente">
+    <section class="side-block">
+      <h2 class="kicker">Texto a criticar</h2>
+      <p class="helper">Carga un archivo o pega el texto. Un solo texto por sesión; el multi-artículo llega después.</p>
+
+      <label class="dropzone" id="dropzone" tabindex="0">
+        <input id="fileInput" type="file" accept=".pdf,.docx,.txt,.md,application/pdf,text/plain,text/markdown" hidden />
+        <strong>Arrastra archivo</strong>
+        <span>o pulsa para elegir</span>
+        <em class="dz-formats">PDF · DOCX · TXT · MD</em>
+      </label>
+
+      <div class="src-card-wrap" id="srcCardWrap" hidden>
+        <div class="src-card" id="srcCard">
+          <div class="src-kind" id="srcKind">—</div>
+          <button class="src-rm" id="srcRm" type="button" title="Eliminar fuente">×</button>
+          <div class="src-name" id="srcName">—</div>
+          <div class="src-meta" id="srcMeta">—</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="side-block">
+      <h2 class="kicker">Metadatos</h2>
+      <div class="field">
+        <label for="metaTitle">Título</label>
+        <input id="metaTitle" type="text" placeholder="Ej. La rojez vespertina" />
+      </div>
+      <div class="field">
+        <label for="metaAuthor">Autor / firma</label>
+        <input id="metaAuthor" type="text" placeholder="Redacción Meridian" />
+      </div>
+      <div class="field">
+        <label for="metaIssue">Sección o n.º</label>
+        <input id="metaIssue" type="text" placeholder="Ensayo · n.º 03" />
+      </div>
+    </section>
+
+    <section class="side-block">
+      <h2 class="kicker">Texto plano</h2>
+      <textarea id="pasteText" rows="14" placeholder="Pega aquí el texto que quieres pasar por la mesa…"></textarea>
+      <div class="paste-actions">
+        <button class="btn ghost small" id="btnLoadPaste" type="button">Cargar pegado</button>
+        <span class="paste-stat" id="pasteStat">0 palabras</span>
+        <span class="paste-stat page-estimate" id="pageEstimate"></span>
+        <span class="paste-stat" id="savedIndicator" aria-live="polite"></span>
+      </div>
+    </section>
+
+    <section class="side-block log-block">
+      <h2 class="kicker">Registro</h2>
+      <div class="log-box" id="logBox"></div>
+    </section>
+  </aside>
+
+  <!-- ===== COLUMNA CENTRAL · barra de acción + informe ===== -->
+  <main class="main-col">
+    <div class="action-bar">
+      <button class="btn primary big" id="btnCritique" type="button" disabled>
+        <span class="bp-mark">◆</span>
+        <span class="bp-label">Pasar por la mesa</span>
+      </button>
+      <div class="action-meta">
+        <span class="am-pill" id="amProvider">— sin IA —</span>
+        <span class="am-pill" id="amPersona">Jefe de redacción</span>
+        <span class="am-pill" id="amSeverity">Estándar</span>
+        <span class="am-pill" id="amLength">Estándar</span>
+        <span class="am-pill" id="amLayout">Clásica</span>
+      </div>
+    </div>
+
+    <div class="export-bar" id="exportBar" hidden>
+      <div class="eb-mark">◆</div>
+      <div class="eb-text">
+        <strong>El informe está listo.</strong>
+        <span id="ebStats">—</span>
+      </div>
+      <button class="btn ghost" id="btnExportTxt" type="button" title="Aplica las propuestas de la Mesa al texto original y descarga el .txt corregido">↓ Descargar texto corregido</button>
+      <button class="btn ghost" id="btnExportMd" type="button" title="Descarga texto + informe en un .md, con las fricciones detalladas">↓ Descargar .md con notas</button>
+      <button class="btn ghost small" id="btnReCritique" type="button" title="Aplica las propuestas al texto y vuelve a pasarlo por la mesa para un segundo informe">↻ Aplicar y re-criticar</button>
+      <button class="btn primary" id="btnHandoff" type="button" title="Aplica las propuestas y abre el sintetizador en modo Maquetar con el texto cargado">Maquetar en el sintetizador →</button>
+    </div>
+
+    <div class="report-frame" id="reportFrame">
+      <div class="empty-state">
+        <div class="empty-mark">◆</div>
+        <h3>La mesa aguarda texto</h3>
+        <p>Pega o carga un texto en la columna izquierda, configura la IA arriba a la derecha,
+           y pulsa <em>Pasar por la mesa</em>. Recibirás un informe estructurado con
+           diagnóstico, fricciones inline y veredicto.</p>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Stage de impresión: A5, fuera del flujo visible, sólo para Cmd+P -->
+<div id="printStage" aria-hidden="true"></div>
+
+<!-- Toasts -->
+<div id="toasts" class="toast-stack" aria-live="polite"></div>
+
+<!-- ============================================================
+     SCRIPTS
+     ============================================================ -->
+<script src="ingest.js"></script>
+<script src="critic.js"></script>
+<script src="layout.js"></script>
+<script src="applier.js"></script>
+<script src="editor.js"></script>
+<script src="app.js"></script>
+
+</body>
+</html>
