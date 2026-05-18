@@ -51,6 +51,7 @@
     meta: { title: '', author: '', issue: '' },
     report: null,
     lastText: '',
+    readings: null,        // sugerencias bibliográficas de la última crítica
     tweaks: loadTweaks(),
     expArticle: null,      // artículo previsualizado en Express (no añadido aún)
     expArticleId: null     // id si ya está en cola
@@ -543,16 +544,23 @@
 
     const o = showOverlay('Pasando por la mesa…');
     try {
+      const SR = window.MesaSources;
+      const sourcesBlock = SR ? SR.formatForPrompt() : '';
+      const srcCount = SR ? SR.count() : 0;
+      if (srcCount) log(`Pasando con ${srcCount} fuente(s) adjunta(s) como contraste.`, 'ok');
+
       const report = await C.critique({
         text, meta: state.meta,
         persona: state.tweaks.persona,
         severity: state.tweaks.severity,
         length: state.tweaks.length,
         language: state.tweaks.language,
+        sourcesBlock,
         onProgress: (info) => updateOverlay(o, info)
       });
       state.report = report;
       state.lastText = text;
+      state.readings = null;          // un informe nuevo invalida las lecturas previas
       renderReport();
       renderExportBar();
       hideOverlay();
@@ -576,6 +584,18 @@
     };
     Y.render($('reportFrame'), opts);
     Y.render($('printStage'), opts);
+
+    // Si hay lecturas sugeridas para este informe, las anexamos
+    // al final del frame y del stage de impresión.
+    if (state.readings && window.MesaReadings) {
+      const html = window.MesaReadings.renderHtml(state.readings);
+      if (html) {
+        const articleEl = $('reportFrame').querySelector('article.report');
+        if (articleEl) articleEl.insertAdjacentHTML('beforeend', html);
+        const printArticleEl = $('printStage').querySelector('article.report');
+        if (printArticleEl) printArticleEl.insertAdjacentHTML('beforeend', html);
+      }
+    }
   }
 
   /* ============================================================
@@ -607,7 +627,10 @@
     const base = A.slug(state.meta.title || 'texto') + '-corregido';
 
     if (format === 'md') {
-      const md = A.buildMarkdownReport(r.text, state.report.fricciones, state.meta, state.report);
+      let md = A.buildMarkdownReport(r.text, state.report.fricciones, state.meta, state.report);
+      if (state.readings && window.MesaReadings) {
+        md += '\n\n' + window.MesaReadings.renderMarkdown(state.readings);
+      }
       A.downloadBlob(md, base + '.md', 'text/markdown;charset=utf-8');
     } else if (format === 'doc') {
       A.exportWord(r.text, state.meta, base);
@@ -652,6 +675,116 @@
       hideOverlay();
       toast('No se pudo enviar al número: ' + (err.message || err), 'err', 6000);
     }
+  }
+
+  /* ============================================================
+     SUGERIR LECTURAS · banda ocre, advertencia visible
+     ============================================================ */
+  async function runSuggestReadings() {
+    if (!state.report) { toast('Genera el informe primero', 'warn'); return; }
+    if (!C.hasLLM()) { toast('Configura IA primero (badge arriba)', 'err'); openKeyModal(); return; }
+    const R = window.MesaReadings;
+    if (!R) { toast('Módulo de lecturas no disponible', 'err'); return; }
+
+    const o = showOverlay('Pidiendo lecturas al modelo…');
+    try {
+      const data = await R.suggest({
+        text: state.lastText,
+        report: state.report,
+        meta: state.meta,
+        language: state.tweaks.language,
+        onProgress: (info) => updateOverlay(o, info)
+      });
+      state.readings = data;
+      renderReport();
+      hideOverlay();
+      const total = (data.lecturas_clave.length + data.lecturas_complementarias.length);
+      log(`Lecturas sugeridas · ${data.lecturas_clave.length} imprescindibles · ${data.lecturas_complementarias.length} para ampliar`, 'ok');
+      toast(`${total} lecturas sugeridas. Verifícalas antes de citar.`, 'ok', 5000);
+    } catch (err) {
+      hideOverlay();
+      log('Error: ' + (err.message || err), 'err');
+      toast('No se pudieron sugerir lecturas: ' + (err.message || err), 'err', 7000);
+    }
+  }
+
+  /* ============================================================
+     FUENTES ADJUNTAS · panel sidebar Mesa
+     ============================================================ */
+  function bindSourcesPanel() {
+    const SR = window.MesaSources;
+    if (!SR) return;
+    const dz = $('srcDropzone');
+    const inp = $('srcFileInput');
+    if (!dz || !inp) return;
+
+    dz.addEventListener('click', () => inp.click());
+    dz.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); inp.click(); }
+    });
+    inp.addEventListener('change', async (e) => {
+      const f = e.target.files && e.target.files[0];
+      inp.value = '';
+      if (f) await loadSourceFile(f);
+    });
+    ['dragenter', 'dragover'].forEach(ev => {
+      dz.addEventListener(ev, (e) => { e.preventDefault(); e.stopPropagation(); dz.classList.add('drag'); });
+    });
+    ['dragleave', 'drop'].forEach(ev => {
+      dz.addEventListener(ev, (e) => { e.preventDefault(); e.stopPropagation(); dz.classList.remove('drag'); });
+    });
+    dz.addEventListener('drop', async (e) => {
+      e.preventDefault(); e.stopPropagation();
+      const f = e.dataTransfer.files && e.dataTransfer.files[0];
+      if (f) await loadSourceFile(f);
+    });
+  }
+
+  async function loadSourceFile(file) {
+    const SR = window.MesaSources;
+    log(`Adjuntando fuente: ${file.name}…`);
+    const o = showOverlay('Leyendo fuente…');
+    try {
+      const entry = await SR.addFromFile(file);
+      hideOverlay();
+      log(`Fuente añadida · ${entry.fileName} · ${entry.words} palabras`, 'ok');
+      renderSourcesList();
+    } catch (err) {
+      hideOverlay();
+      log('Error al adjuntar fuente: ' + (err.message || err), 'err');
+      toast('No se pudo adjuntar: ' + (err.message || err), 'err', 5000);
+    }
+  }
+
+  function renderSourcesList() {
+    const SR = window.MesaSources;
+    if (!SR) return;
+    const list = $('srcList');
+    const counter = $('srcCounter');
+    if (!list) return;
+    const all = SR.loadAll();
+    if (counter) counter.textContent = all.length ? '· ' + all.length : '';
+    if (!all.length) {
+      list.innerHTML = '<li class="src-empty">Sin fuentes adjuntas.</li>';
+      return;
+    }
+    list.innerHTML = all.map(e => `
+      <li class="src-item" data-id="${e.id}">
+        <div class="src-item-body">
+          <div class="src-item-name">${Y.escapeHtml(e.fileName)}</div>
+          <div class="src-item-meta">${Y.escapeHtml(e.kind.toUpperCase())} · ${e.words} pal</div>
+        </div>
+        <button class="src-item-rm" type="button" title="Quitar fuente">×</button>
+      </li>
+    `).join('');
+    list.querySelectorAll('.src-item').forEach(item => {
+      const id = item.dataset.id;
+      item.querySelector('.src-item-rm').addEventListener('click', () => {
+        SR.remove(id);
+        log(`Fuente quitada · ${id.slice(-6)}`, 'warn');
+        renderSourcesList();
+      });
+    });
   }
 
   /* ============================================================
@@ -1105,6 +1238,7 @@
     }
     if (!confirm('¿Vaciar la mesa? Se borran el texto, los metadatos y el informe (la configuración de IA, los tweaks y el número se mantienen).')) return;
     state.source = null; state.pasteText = ''; state.report = null; state.lastText = '';
+    state.readings = null;
     state.meta = { title: '', author: '', issue: '' };
     $('pasteText').value = '';
     $('metaTitle').value = '';
@@ -1244,6 +1378,7 @@
     $('btnExportDoc').addEventListener('click', () => exportCorrected('doc'));
     $('btnExportPdfMesa').addEventListener('click', () => exportCorrected('pdf'));
     $('btnReCritique').addEventListener('click', applyAndRecritique);
+    $('btnSuggestReadings').addEventListener('click', runSuggestReadings);
     $('btnSendToIssue').addEventListener('click', sendCorrectedToIssue);
     $('btnHandoff').addEventListener('click', handoffToSynth);
 
@@ -1278,6 +1413,10 @@
     restoreDraft();
     detectSynthesizer();
     refreshExpressUI();
+
+    // Fuentes adjuntas
+    bindSourcesPanel();
+    renderSourcesList();
 
     log('Mesa lista. Configura IA y carga texto.', 'ok');
     log('Express y Número disponibles en las pestañas de arriba.', 'ok');

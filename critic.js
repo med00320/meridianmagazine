@@ -249,7 +249,7 @@
   /* ============================================================
      PROMPT · informe estructurado
      ============================================================ */
-  function buildPrompt({ text, meta, persona, severity, length, language }) {
+  function buildPrompt({ text, meta, persona, severity, length, language, sourcesBlock }) {
     const P = PERSONAS[persona] || PERSONAS.jefe;
     const S = SEVERITIES[severity] || SEVERITIES.standard;
     const L = LENGTHS[length] || LENGTHS.standard;
@@ -257,6 +257,8 @@
 
     const numbered = (text || '').split(/\n{2,}/).map(s => s.trim()).filter(Boolean)
       .map((p, i) => `§${i + 1}  ${p}`).join('\n\n');
+
+    const sourcesSection = sourcesBlock ? '\n' + sourcesBlock + '\n' : '';
 
     return `${P.voice}
 
@@ -270,7 +272,7 @@ METADATOS DECLARADOS:
 - Título: ${meta.title || '(sin título)'}
 - Autor: ${meta.author || '(sin firma)'}
 - Sección / n.º: ${meta.issue || '—'}
-
+${sourcesSection}
 TEXTO (los párrafos vienen numerados como §1, §2, … para que puedas referenciarlos en tus citas):
 
 ${numbered}
@@ -321,12 +323,12 @@ REGLAS NO NEGOCIABLES:
   /* ============================================================
      ENTRY POINT
      ============================================================ */
-  async function critique({ text, meta, persona, severity, length, language, onProgress }) {
+  async function critique({ text, meta, persona, severity, length, language, sourcesBlock, onProgress }) {
     if (!text || !text.trim()) throw new Error('No hay texto que criticar.');
     if (onProgress) onProgress({ step: 'Pasando el texto por la mesa…', pct: 15 });
 
     const L = LENGTHS[length] || LENGTHS.standard;
-    const prompt = buildPrompt({ text, meta, persona, severity, length, language });
+    const prompt = buildPrompt({ text, meta, persona, severity, length, language, sourcesBlock });
 
     if (onProgress) onProgress({ step: 'Esperando al modelo…', pct: 35 });
     const raw = await callLLM(prompt, { max_tokens: L.maxTokens, json: true, temperature: 0.5 });

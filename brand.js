@@ -182,12 +182,86 @@ Devuelve SÓLO el JSON. Sin preámbulo.`;
   }
 
   /* ============================================================
+     PROMPT · sugerir lecturas para profundizar en las fricciones
+     ============================================================ */
+  async function buildReadingsPrompt({ text, report, meta, language }) {
+    const voice = await loadVoice();
+    const langLock = (language === 'neutro')
+      ? 'Devuelve los títulos en su lengua original; los comentarios en español neutro.'
+      : 'Devuelve los títulos en su lengua original; los comentarios en castellano peninsular culto.';
+
+    // Compactamos las fricciones para no inflar el prompt
+    const fricciones = (report && report.fricciones || []).map((f, i) => ({
+      n: i + 1,
+      tipo: f.tipo || '',
+      cita: (f.cita || '').slice(0, 200),
+      comentario: (f.comentario || '').slice(0, 200)
+    }));
+    const tesis = (report && report.tesis_detectada) || '';
+    const diagnostico = (report && report.diagnostico || '').slice(0, 500);
+
+    return `Eres editor de Meridian Magazine. Acabas de pasar por la mesa un texto sobre literatura norteamericana XX-XXI y tienes el informe delante. Tu tarea ahora es proponer LECTURAS COMPLEMENTARIAS para que un redactor pueda profundizar en los conceptos y problemas que el informe ha detectado.
+
+=== VOZ MERIDIAN (resumen) ===
+${voice.slice(0, 1200)}
+=== FIN ===
+
+${langLock}
+
+CONTEXTO DEL TEXTO:
+- Título: ${(meta && meta.title) || '(sin título)'}
+- Tesis detectada: ${tesis || '(no detectada)'}
+- Diagnóstico (extracto): ${diagnostico}
+
+FRICCIONES DETECTADAS · necesitan profundización:
+${fricciones.map(f => `[${f.n}] (${f.tipo}) "${f.cita}" — ${f.comentario}`).join('\n')}
+
+TAREA · Devuelve un JSON ESTRICTO con esta forma EXACTA:
+
+{
+  "lecturas_clave": [
+    {
+      "autor": "Apellido(s), Nombre",
+      "titulo": "Título de la obra (cursiva en el render, no añadas asteriscos)",
+      "ano": "1985",
+      "editorial": "Editorial · ciudad (opcional, déjalo vacío si no estás seguro)",
+      "tipo": "ensayo | novela | articulo | biografia | manual",
+      "porque": "una frase de 18-30 palabras explicando POR QUÉ esta lectura ayuda a profundizar en este texto en concreto, conectándola con la tesis o las fricciones detectadas",
+      "fricciones_relacionadas": [3, 5]
+    }
+  ],
+  "lecturas_complementarias": [
+    {
+      "autor": "...",
+      "titulo": "...",
+      "ano": "...",
+      "tipo": "...",
+      "porque": "..."
+    }
+  ],
+  "advertencia_revisor": "una frase recordando al redactor que debe verificar las referencias antes de citarlas"
+}
+
+REGLAS NO NEGOCIABLES:
+- "lecturas_clave": 3 a 5 obras IMPRESCINDIBLES, las que de verdad iluminan el texto. Cita autor y obra COMPLETOS, no abreviaturas.
+- "lecturas_complementarias": 2 a 4 obras de segunda fila, útiles si el redactor quiere ampliar.
+- NO inventes obras. Si dudas de una referencia, NO la incluyas. Es preferible devolver 3 lecturas seguras que 8 dudosas.
+- NO inventes números de página, capítulos específicos ni ediciones precisas si no estás seguro. Deja "editorial" vacío en caso de duda.
+- "porque" debe conectar la lectura con ESTE texto en concreto, no con el tema en abstracto. Cita la fricción o el concepto del diagnóstico al que responde.
+- "fricciones_relacionadas" es un array de números de fricción (los [N] de arriba) a los que esa lectura responde directamente. Puede ir vacío si la lectura es general.
+- Cuando la fricción sea factual o de atribución de cita, prioriza fuentes primarias (la propia obra citada, ediciones críticas, biografías de referencia). Cuando sea conceptual, prioriza ensayos teóricos.
+- "advertencia_revisor": breve y útil, no genérica.
+- No envuelvas el JSON en \`\`\`json. No añadas comentarios. Devuelve SÓLO el objeto JSON.`;
+  }
+
+  /* ============================================================
      EXPOSE
      ============================================================ */
   global.MesaBrand = {
     loadVoice,
     buildArticlePrompt,
     buildSectionTitlesPrompt,
-    buildIssueCopyPrompt
+    buildIssueCopyPrompt,
+    buildReadingsPrompt
   };
 })(window);

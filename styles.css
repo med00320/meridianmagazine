@@ -1884,3 +1884,179 @@ textarea#pasteText.rt-hidden-source {
   .iss-body p.iss-sep,
   .iss-body p.iss-diamante { page-break-inside: avoid; }
 }
+
+
+
+/* ============================================================
+   FUENTES ADJUNTAS · sidebar Mesa
+   ============================================================ */
+.kicker-aux {
+  font-family: var(--f-mono);
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  color: var(--ochre);
+  margin-left: 4px;
+  text-transform: none;
+}
+.dropzone-mini {
+  padding: 12px 10px;
+  font-family: var(--f-meta);
+}
+.dropzone-mini span {
+  font-family: var(--f-display);
+  font-style: italic;
+  font-size: 16px;
+  color: var(--ink);
+  text-transform: none;
+  letter-spacing: 0;
+}
+.src-list {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.src-empty {
+  font-family: var(--f-body);
+  font-style: italic;
+  font-size: 12px;
+  color: var(--ink3);
+  padding: 6px 4px;
+}
+.src-item {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  background: #fff;
+  border: 0.5pt solid var(--paper3);
+  border-left: 2pt solid var(--ochre);
+}
+.src-item-name {
+  font-family: var(--f-body);
+  font-size: 13px;
+  color: var(--ink);
+  line-height: 1.2;
+  word-break: break-word;
+}
+.src-item-meta {
+  font-family: var(--f-meta);
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink3);
+  margin-top: 2px;
+}
+.src-item-rm {
+  background: transparent;
+  border: none;
+  font-size: 16px;
+  color: var(--ink3);
+  cursor: pointer;
+  line-height: 1;
+  padding: 0 4px;
+}
+.src-item-rm:hover { color: var(--red); }
+
+/* ============================================================
+   LECTURAS SUGERIDAS · banda ocre · advertencia visible
+   ============================================================ */
+.rep-readings {
+  background: rgba(184,133,68,0.06);
+  border-left: 2pt solid var(--ochre);
+  padding: 18px 22px;
+  margin-top: 24px;
+}
+.rep-readings .rep-h2 {
+  color: var(--ochre);
+  border-bottom-color: var(--ochre);
+}
+.rd-warning {
+  font-family: var(--f-body);
+  font-style: italic;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink2);
+  background: rgba(184,133,68,0.12);
+  border: 0.5pt dashed var(--ochre);
+  padding: 8px 12px;
+  margin-bottom: 16px;
+}
+.rd-warning strong {
+  color: var(--red);
+  font-style: normal;
+  font-weight: 500;
+  font-family: var(--f-meta);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  margin-right: 6px;
+}
+.rd-subh {
+  font-family: var(--f-meta);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--red);
+  margin: 14px 0 8px;
+}
+.rd-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 0;
+  margin: 0;
+}
+.rd-list-sec { opacity: 0.92; }
+.rd-item {
+  background: #fff;
+  border: 0.5pt solid var(--paper3);
+  border-left: 1.5pt solid var(--ochre);
+  padding: 10px 14px;
+}
+.rd-head {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  font-family: var(--f-meta);
+  font-size: 9px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ink3);
+  margin-bottom: 4px;
+}
+.rd-tipo { color: var(--ochre); }
+.rd-refs { color: var(--red); margin-left: auto; font-family: var(--f-mono); letter-spacing: 0.06em; }
+.rd-cite {
+  font-family: var(--f-body);
+  font-size: 14.5px;
+  line-height: 1.45;
+  color: var(--ink);
+  margin-bottom: 6px;
+  text-wrap: pretty;
+}
+.rd-autor { font-weight: 500; }
+.rd-titulo { font-style: italic; color: var(--ink); }
+.rd-meta { color: var(--ink3); font-size: 13px; }
+.rd-porque {
+  font-family: var(--f-body);
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--ink2);
+  text-wrap: pretty;
+}
+
+@media print {
+  .rep-readings {
+    background: #fff !important;
+    border-left: 1pt solid #B88544 !important;
+    padding: 8pt 0 !important;
+  }
+  .rd-item { background: #fff !important; page-break-inside: avoid; }
+  .rd-warning { background: #fff !important; }
+}

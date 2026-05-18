@@ -115,6 +115,17 @@
       </div>
     </section>
 
+    <section class="side-block">
+      <h2 class="kicker">Fuentes adjuntas <span class="kicker-aux" id="srcCounter"></span></h2>
+      <p class="helper">Bibliografía de apoyo, entrevistas, capítulos. La Mesa los usa para contrastar afirmaciones del texto.</p>
+      <label class="dropzone dropzone-mini" id="srcDropzone" tabindex="0">
+        <input id="srcFileInput" type="file" accept=".pdf,.docx,.txt,.md,application/pdf,text/plain,text/markdown" hidden />
+        <span>Añadir fuente</span>
+        <em class="dz-formats">PDF · DOCX · TXT · MD</em>
+      </label>
+      <ul class="src-list" id="srcList"></ul>
+    </section>
+
     <section class="side-block log-block">
       <h2 class="kicker">Registro</h2>
       <div class="log-box" id="logBox"></div>
@@ -146,6 +157,7 @@
       <button class="btn ghost"       id="btnExportMd"    type="button" title="Texto + informe en .md, con fricciones detalladas">↓ .md con notas</button>
       <button class="btn ghost"       id="btnExportDoc"   type="button" title="Aplica las propuestas y descarga el texto corregido como .doc">↓ Word (.doc)</button>
       <button class="btn ghost"       id="btnExportPdfMesa" type="button" title="Imprime el informe en A5; en Chrome elige Guardar como PDF">↓ PDF</button>
+      <button class="btn ghost"       id="btnSuggestReadings" type="button" title="Pide al modelo lecturas para profundizar en los conceptos del informe. Las sugerencias del modelo deben verificarse antes de citarse.">📚 Sugerir lecturas</button>
       <button class="btn ghost small" id="btnReCritique"  type="button" title="Aplica las propuestas y vuelve a pasarlo por la mesa">↻ Re-criticar</button>
       <button class="btn primary"     id="btnSendToIssue" type="button" title="Envía el texto corregido al Número como un artículo (sin volver a pasar por revisión)">→ Enviar al Número</button>
       <button class="btn ghost small" id="btnHandoff"     type="button" hidden title="Sólo si está integrado con el sintetizador padre">Maquetar →</button>
@@ -401,6 +413,8 @@
 <script src="layout.js"></script>
 <script src="applier.js"></script>
 <script src="brand.js"></script>
+<script src="sources.js"></script>
+<script src="readings.js"></script>
 <script src="sectioner.js"></script>
 <script src="express.js"></script>
 <script src="issue.js"></script>
