@@ -149,10 +149,24 @@
   }
 
   async function formatHttpError(label, res) {
+    // Lee el cuerpo UNA SOLA VEZ como texto. Si parece JSON, lo intentamos
+    // parsear desde el string para extraer el mensaje legible. Si no, dejamos
+    // el texto tal cual. Antes hacíamos res.json() y, si fallaba, res.text()
+    // sobre el mismo response ya consumido — lo que disparaba
+    // "body stream already read" y enmascaraba el error real.
     let detail = '';
-    try { const j = await res.json(); detail = j?.error?.message || j?.error || JSON.stringify(j); }
-    catch { detail = await res.text(); }
-    return `${label} · HTTP ${res.status}: ${typeof detail === 'string' ? detail : JSON.stringify(detail)}`;
+    try { detail = await res.text(); } catch { detail = ''; }
+    if (detail) {
+      const trimmed = detail.trim();
+      if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+        try {
+          const j = JSON.parse(trimmed);
+          detail = j?.error?.message || j?.error || JSON.stringify(j);
+        } catch { /* deja detail como texto plano */ }
+      }
+    }
+    if (typeof detail !== 'string') detail = JSON.stringify(detail);
+    return `${label} · HTTP ${res.status}: ${detail || '(respuesta vacía)'}`;
   }
 
   /* ============================================================
@@ -235,7 +249,7 @@
   /* ============================================================
      PROMPT · informe estructurado
      ============================================================ */
-  function buildPrompt({ text, meta, persona, severity, length, language }) {
+  function buildPrompt({ text, meta, persona, severity, length, language, sourcesBlock }) {
     const P = PERSONAS[persona] || PERSONAS.jefe;
     const S = SEVERITIES[severity] || SEVERITIES.standard;
     const L = LENGTHS[length] || LENGTHS.standard;
@@ -243,6 +257,8 @@
 
     const numbered = (text || '').split(/\n{2,}/).map(s => s.trim()).filter(Boolean)
       .map((p, i) => `§${i + 1}  ${p}`).join('\n\n');
+
+    const sourcesSection = sourcesBlock ? '\n' + sourcesBlock + '\n' : '';
 
     return `${P.voice}
 
@@ -256,7 +272,7 @@ METADATOS DECLARADOS:
 - Título: ${meta.title || '(sin título)'}
 - Autor: ${meta.author || '(sin firma)'}
 - Sección / n.º: ${meta.issue || '—'}
-
+${sourcesSection}
 TEXTO (los párrafos vienen numerados como §1, §2, … para que puedas referenciarlos en tus citas):
 
 ${numbered}
@@ -307,12 +323,12 @@ REGLAS NO NEGOCIABLES:
   /* ============================================================
      ENTRY POINT
      ============================================================ */
-  async function critique({ text, meta, persona, severity, length, language, onProgress }) {
+  async function critique({ text, meta, persona, severity, length, language, sourcesBlock, onProgress }) {
     if (!text || !text.trim()) throw new Error('No hay texto que criticar.');
     if (onProgress) onProgress({ step: 'Pasando el texto por la mesa…', pct: 15 });
 
     const L = LENGTHS[length] || LENGTHS.standard;
-    const prompt = buildPrompt({ text, meta, persona, severity, length, language });
+    const prompt = buildPrompt({ text, meta, persona, severity, length, language, sourcesBlock });
 
     if (onProgress) onProgress({ step: 'Esperando al modelo…', pct: 35 });
     const raw = await callLLM(prompt, { max_tokens: L.maxTokens, json: true, temperature: 0.5 });

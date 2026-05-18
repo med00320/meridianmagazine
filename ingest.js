@@ -9,6 +9,27 @@
   const pdfjs = global.pdfjsLib || null;
   const mammoth = global.mammoth || null;
 
+  // Límites de carga · evita colgar el navegador con archivos absurdos
+  const MAX_FILE_BYTES = 25 * 1024 * 1024;   // 25 MB
+  const PDF_TIMEOUT_MS = 60 * 1000;          // 60 s para parsear el PDF entero
+
+  function fmtBytes(n) {
+    if (n < 1024) return n + ' B';
+    if (n < 1024 * 1024) return (n / 1024).toFixed(1) + ' KB';
+    return (n / (1024 * 1024)).toFixed(1) + ' MB';
+  }
+
+  function withTimeout(promise, ms, label) {
+    return new Promise((resolve, reject) => {
+      const t = setTimeout(() => reject(new Error(
+        `${label || 'Operación'} cancelada tras ${Math.round(ms / 1000)} s. ` +
+        `El archivo es muy grande o el navegador está saturado.`
+      )), ms);
+      promise.then(v => { clearTimeout(t); resolve(v); },
+                   e => { clearTimeout(t); reject(e); });
+    });
+  }
+
   function cleanText(raw) {
     if (!raw) return '';
     return String(raw)
@@ -28,25 +49,28 @@
   async function loadPdf(file, onProgress) {
     if (!pdfjs) throw new Error('pdf.js no disponible en este entorno.');
     const buf = await file.arrayBuffer();
-    const pdf = await pdfjs.getDocument({ data: buf }).promise;
-    const chunks = [];
-    for (let i = 1; i <= pdf.numPages; i++) {
-      const p = await pdf.getPage(i);
-      const tc = await p.getTextContent();
-      let lastY = null, line = [], lines = [];
-      for (const it of tc.items) {
-        const y = it.transform ? Math.round(it.transform[5]) : null;
-        if (lastY !== null && y !== null && Math.abs(y - lastY) > 4) {
-          lines.push(line.join(' ')); line = [];
+    const work = (async () => {
+      const pdf = await pdfjs.getDocument({ data: buf }).promise;
+      const chunks = [];
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const p = await pdf.getPage(i);
+        const tc = await p.getTextContent();
+        let lastY = null, line = [], lines = [];
+        for (const it of tc.items) {
+          const y = it.transform ? Math.round(it.transform[5]) : null;
+          if (lastY !== null && y !== null && Math.abs(y - lastY) > 4) {
+            lines.push(line.join(' ')); line = [];
+          }
+          line.push(it.str);
+          lastY = y;
         }
-        line.push(it.str);
-        lastY = y;
+        if (line.length) lines.push(line.join(' '));
+        chunks.push(lines.join('\n'));
+        if (onProgress) onProgress(i, pdf.numPages);
       }
-      if (line.length) lines.push(line.join(' '));
-      chunks.push(lines.join('\n'));
-      if (onProgress) onProgress(i, pdf.numPages);
-    }
-    return cleanText(chunks.join('\n\n'));
+      return cleanText(chunks.join('\n\n'));
+    })();
+    return withTimeout(work, PDF_TIMEOUT_MS, 'Lectura del PDF');
   }
 
   /* --- DOCX --- */
@@ -62,22 +86,23 @@
     return cleanText(await file.text());
   }
 
-  /* --- Markdown: quitamos el azúcar pero conservamos párrafos --- */
+  /* --- Markdown: respetamos listas, citas y cabeceras como markdown
+         (los consumidores que necesiten texto plano pueden quitar
+         el azúcar; conservar la estructura permite que el editor
+         enriquecido pinte cursivas/negritas y que el sectioner
+         encuentre `## Intertítulos` cuando vienen del autor). --- */
   async function loadMarkdown(file) {
-    const raw = await file.text();
-    // Strip muy ligero: cabeceras, listas, énfasis. No queremos perder contenido.
-    const stripped = raw
-      .replace(/^\s{0,3}#{1,6}\s+/gm, '')   // # cabeceras
-      .replace(/^\s{0,3}>\s?/gm, '')        // > blockquotes
-      .replace(/^\s*[-*+]\s+/gm, '· ')      // listas → bullet visible
-      .replace(/`{1,3}([^`]+)`{1,3}/g, '$1')// código inline
-      .replace(/\*\*([^*]+)\*\*/g, '$1')    // **bold**
-      .replace(/\*([^*]+)\*/g, '$1')        // *italic*
-      .replace(/_([^_]+)_/g, '$1');         // _italic_
-    return cleanText(stripped);
+    return cleanText(await file.text());
   }
 
   async function loadFile(file, onProgress) {
+    if (!file) throw new Error('Sin archivo.');
+    if (file.size > MAX_FILE_BYTES) {
+      throw new Error(
+        `Archivo demasiado grande: ${fmtBytes(file.size)}. ` +
+        `Límite ${fmtBytes(MAX_FILE_BYTES)}. Trocea el documento o exporta a TXT/MD.`
+      );
+    }
     const ext = (file.name.split('.').pop() || '').toLowerCase();
     if (ext === 'pdf')                       return { kind: 'pdf',  text: await loadPdf(file, onProgress) };
     if (ext === 'docx')                      return { kind: 'docx', text: await loadDocx(file) };
