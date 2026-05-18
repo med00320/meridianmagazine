@@ -8,6 +8,7 @@
   const I = window.MesaIngest;
   const C = window.MesaCritic;
   const Y = window.MesaLayout;
+  const SR = window.MesaSources;
 
   const $ = (id) => document.getElementById(id);
 
@@ -329,6 +330,21 @@
   function refreshPills() {
     const t = state.tweaks;
     $('amProvider').textContent = C.hasLLM() ? C.currentLabel().split('·').slice(0,1).join('').trim().toUpperCase() : 'SIN IA';
+    const sxPill = $('amSourcesProvider');
+    if (sxPill) {
+      if (SR.hasLLM()) {
+        const short = SR.currentLabel().split('·').slice(0,1).join('').trim().toUpperCase();
+        sxPill.textContent = 'FUENTES · ' + short;
+        sxPill.classList.add('ok');
+        sxPill.classList.remove('warn');
+        sxPill.title = 'IA de fuentes: ' + SR.currentLabel() + '. Pulsa para cambiar.';
+      } else {
+        sxPill.textContent = 'FUENTES · CONFIGURAR';
+        sxPill.classList.add('warn');
+        sxPill.classList.remove('ok');
+        sxPill.title = 'Sin IA de fuentes. Pulsa para configurar Ollama / OpenAI / Claude / Gemini.';
+      }
+    }
     $('amPersona').textContent  = (C.PERSONAS[t.persona]   || {}).label || '—';
     $('amSeverity').textContent = (C.SEVERITIES[t.severity]|| {}).label || '—';
     $('amLength').textContent   = (C.LENGTHS[t.length]     || {}).label || '—';
@@ -551,6 +567,255 @@
     };
     Y.render($('reportFrame'), opts);
     Y.render($('printStage'), opts);
+  }
+
+  /* ============================================================
+     FUENTES POR FRICCIÓN
+     ============================================================ */
+
+  // Repinta SÓLO el bloque de fuentes de una fricción concreta,
+  // sin re-renderizar todo el informe (preserva scroll, no parpadea).
+  function repaintFuentes(idx) {
+    const f = state.report?.fricciones?.[idx];
+    if (!f) return;
+    const slot = document.querySelector(`#reportFrame [data-fr-sources="${idx}"]`);
+    if (!slot) return;
+    slot.innerHTML = Y.renderFuentesBlock(f._fuentes);
+  }
+
+  // Devuelve los párrafos vecinos del que contiene la fricción,
+  // como contexto para que la IA de fuentes "vea" el entorno (no sólo la cita).
+  function getContextoFriccion(f) {
+    const text = state.lastText || getActiveText();
+    if (!text) return '';
+    const paras = text.split(/\n{2,}/).map(s => s.trim()).filter(Boolean);
+    const idx = (Number(f.parrafo) || 0) - 1;
+    if (idx < 0 || idx >= paras.length) return '';
+    const start = Math.max(0, idx - 1);
+    const end   = Math.min(paras.length, idx + 2);
+    return paras.slice(start, end).map((p, k) => `§${start + k + 1}  ${p}`).join('\n\n');
+  }
+
+  async function runFindSources(idx) {
+    if (!state.report) return;
+    const f = state.report.fricciones?.[idx];
+    if (!f) return;
+
+    if (!SR.hasLLM()) {
+      toast('Configura el proveedor de fuentes primero', 'warn', 4000);
+      openSourcesModal(() => runFindSources(idx));
+      return;
+    }
+
+    f._fuentes = { loading: true, idx };
+    repaintFuentes(idx);
+
+    try {
+      const data = await SR.findSources({
+        friccion: f,
+        meta: state.meta,
+        contextoTexto: getContextoFriccion(f)
+      });
+      f._fuentes = {
+        loading: false,
+        idx,
+        data,
+        providerLabel: SR.currentLabel().split('·').slice(0, 1).join('').trim()
+      };
+      repaintFuentes(idx);
+      const n = (data.fuentes || []).length;
+      log(`Fricción ${String(idx + 1).padStart(2,'0')} · ${n} fuente(s) sugerida(s)`, 'ok');
+      if (!n) toast(data.nota_general || 'El modelo no ha encontrado fuentes útiles.', 'warn', 4500);
+    } catch (err) {
+      console.error('[mesa·sources]', err);
+      f._fuentes = { loading: false, idx, error: err.message || String(err) };
+      repaintFuentes(idx);
+      log('Fuentes · error: ' + (err.message || err), 'err');
+    }
+  }
+
+  function dismissFuentes(idx) {
+    const f = state.report?.fricciones?.[idx];
+    if (!f) return;
+    delete f._fuentes;
+    repaintFuentes(idx);
+  }
+
+  // Delegación de eventos sobre el reportFrame: botones de fuentes.
+  function bindReportClicks() {
+    const frame = $('reportFrame');
+    frame.addEventListener('click', (e) => {
+      const btn = e.target.closest('button[data-act]');
+      if (!btn) return;
+      const idx = Number(btn.dataset.frIdx);
+      if (!Number.isFinite(idx)) return;
+      const act = btn.dataset.act;
+      if (act === 'find-sources' || act === 'retry-sources') runFindSources(idx);
+      else if (act === 'dismiss-sources') dismissFuentes(idx);
+    });
+  }
+
+  /* ============================================================
+     MODAL · configuración del PROVEEDOR DE FUENTES (independiente)
+     ============================================================ */
+  function openSourcesModal(onSavedCallback) {
+    const cfg = Object.assign({ provider: '', model: '', apiKey: '', baseUrl: '', customModel: '' }, SR.getConfig());
+    const providers = SR.PROVIDERS;
+
+    const overlay = document.createElement('div');
+    overlay.className = 'key-modal-overlay';
+    overlay.innerHTML = `
+      <div class="key-modal">
+        <div class="km-kicker">FUENTES · IA INDEPENDIENTE</div>
+        <h3>Proveedor de búsqueda de fuentes</h3>
+        <div class="km-mode ${SR.hasLLM() ? 'ok' : ''}">
+          ${SR.hasLLM() ? 'Activo · ' + SR.currentLabel() : 'Sin IA · elige proveedor abajo'}
+        </div>
+        <p class="km-helper" style="margin:6px 0 12px;font-style:italic;color:var(--ink3);">
+          Este proveedor se usa SÓLO para buscar fuentes desde una fricción. Es independiente del proveedor que pasa el texto por la mesa.
+        </p>
+
+        <div class="field">
+          <label>Proveedor</label>
+          <select id="sxProvider">
+            <option value="">— Elige proveedor —</option>
+            ${Object.entries(providers).map(([id, p]) =>
+              `<option value="${id}" ${cfg.provider === id ? 'selected' : ''}>${p.label}</option>`).join('')}
+          </select>
+        </div>
+
+        <div class="field">
+          <label>Modelo</label>
+          <select id="sxModel"></select>
+        </div>
+
+        <div class="field" id="sxCustomModelWrap" style="display:none;">
+          <label>Nombre del modelo (custom)</label>
+          <input id="sxCustomModel" type="text" placeholder="ej. claude-3-7-sonnet-latest" value="${escapeAttr(cfg.customModel || '')}" />
+        </div>
+
+        <div class="field" id="sxBaseUrlWrap" style="display:none;">
+          <div class="km-label-row" style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;">
+            <label for="sxBaseUrl" style="margin:0;">URL base del servidor</label>
+            <button type="button" id="sxBaseUrlReset" class="km-reset-btn"
+                    style="background:none;border:0;padding:0;font:inherit;font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--red,#a23);cursor:pointer;text-decoration:underline;text-underline-offset:3px;"
+                    title="Restablecer al valor por defecto del proveedor">↺ Por defecto</button>
+          </div>
+          <input id="sxBaseUrl" type="text" placeholder="http://localhost:11434/v1" value="${escapeAttr(cfg.baseUrl || '')}" />
+          <div class="km-helper" id="sxBaseUrlHint"></div>
+        </div>
+
+        <div class="field" id="sxKeyWrap" style="display:none;">
+          <label>API key</label>
+          <input id="sxKey" type="password" placeholder="(pega tu clave)" value="${escapeAttr(cfg.apiKey || '')}" autocomplete="off" />
+          <div class="km-helper" id="sxKeyHint"></div>
+        </div>
+
+        <div class="km-warn" id="sxProviderWarn" style="display:none;"></div>
+        <div class="km-warn"><strong>Aviso:</strong> la clave se guarda sin cifrar en <code>localStorage</code> de este navegador. No compartas el equipo.</div>
+
+        <div class="km-actions">
+          <button class="btn ghost" data-act="clear" type="button">Borrar config</button>
+          <button class="btn ghost" data-act="cancel" type="button">Cancelar</button>
+          <button class="btn primary" data-act="save" type="button">Guardar</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+
+    const elProv     = overlay.querySelector('#sxProvider');
+    const elModel    = overlay.querySelector('#sxModel');
+    const elCustomW  = overlay.querySelector('#sxCustomModelWrap');
+    const elCustom   = overlay.querySelector('#sxCustomModel');
+    const elBaseW    = overlay.querySelector('#sxBaseUrlWrap');
+    const elBase     = overlay.querySelector('#sxBaseUrl');
+    const elBaseHint = overlay.querySelector('#sxBaseUrlHint');
+    const elKeyW     = overlay.querySelector('#sxKeyWrap');
+    const elKey      = overlay.querySelector('#sxKey');
+    const elKeyHint  = overlay.querySelector('#sxKeyHint');
+    const elProvWarn = overlay.querySelector('#sxProviderWarn');
+
+    function syncProviderFields() {
+      const pid = elProv.value;
+      const p = providers[pid];
+      if (!p) {
+        elModel.innerHTML = '<option value="">—</option>';
+        elBaseW.style.display = 'none';
+        elKeyW.style.display  = 'none';
+        elCustomW.style.display = 'none';
+        elProvWarn.style.display = 'none';
+        return;
+      }
+      elModel.innerHTML = p.models.map(m =>
+        `<option value="${m.id}" ${m.id === cfg.model ? 'selected' : ''}>${m.label}</option>`
+      ).join('');
+      if (!p.models.find(m => m.id === cfg.model)) elModel.value = p.defaultModel;
+
+      if (p.needsBaseUrl) {
+        elBaseW.style.display = '';
+        if (!elBase.value) elBase.value = p.baseUrlDefault || '';
+        elBaseHint.textContent = p.baseUrlHint || '';
+      } else { elBaseW.style.display = 'none'; }
+
+      if (p.needsKey) {
+        elKeyW.style.display = '';
+        elKey.placeholder = p.keyHint || '';
+        elKeyHint.innerHTML = p.docs
+          ? `Tu clave en <a href="${p.docs}" target="_blank" rel="noopener">${p.docs.replace(/^https?:\/\//, '')}</a>`
+          : '';
+      } else { elKeyW.style.display = 'none'; }
+
+      if (p.warn) {
+        elProvWarn.style.display = '';
+        elProvWarn.innerHTML = `<strong>Sobre ${p.label}:</strong> ${p.warn}`;
+      } else {
+        elProvWarn.style.display = 'none';
+      }
+
+      syncCustom();
+    }
+    function syncCustom() {
+      elCustomW.style.display = (elModel.value === '__custom__') ? '' : 'none';
+    }
+
+    elProv.addEventListener('change', () => { cfg.model = ''; syncProviderFields(); });
+    elModel.addEventListener('change', syncCustom);
+    overlay.querySelector('#sxBaseUrlReset').addEventListener('click', () => {
+      const p = providers[elProv.value];
+      if (!p || !p.needsBaseUrl) return;
+      elBase.value = p.baseUrlDefault || '';
+      elBase.focus();
+      elBase.select();
+      toast(`URL base restablecida a ${p.baseUrlDefault}`, 'ok', 2500);
+    });
+
+    syncProviderFields();
+
+    function close() { overlay.remove(); }
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+    overlay.querySelector('[data-act="cancel"]').addEventListener('click', close);
+    overlay.querySelector('[data-act="clear"]').addEventListener('click', () => {
+      SR.clearConfig(); refreshBadge(); toast('Config de fuentes borrada', 'ok'); close();
+    });
+    overlay.querySelector('[data-act="save"]').addEventListener('click', () => {
+      const pid = elProv.value;
+      const p = providers[pid];
+      if (!p) { toast('Elige proveedor', 'warn'); return; }
+      const newCfg = {
+        provider: pid,
+        model: elModel.value,
+        apiKey: p.needsKey ? elKey.value.trim() : '',
+        baseUrl: p.needsBaseUrl ? elBase.value.trim() : '',
+        customModel: elCustom.value.trim()
+      };
+      if (p.needsKey && !newCfg.apiKey) { toast('Falta la API key', 'warn'); return; }
+      if (p.needsBaseUrl && !newCfg.baseUrl) { toast('Falta la URL base', 'warn'); return; }
+      if (newCfg.model === '__custom__' && !newCfg.customModel) { toast('Especifica el nombre del modelo', 'warn'); return; }
+      SR.setConfig(newCfg);
+      refreshBadge();
+      toast('Proveedor de fuentes guardado', 'ok');
+      close();
+      if (typeof onSavedCallback === 'function') onSavedCallback();
+    });
   }
 
   /* ============================================================
@@ -830,6 +1095,8 @@
     bindPaste();
 
     $('aiBadge').addEventListener('click', openKeyModal);
+    const sxPill = $('amSourcesProvider');
+    if (sxPill) sxPill.addEventListener('click', () => openSourcesModal());
     $('btnCritique').addEventListener('click', runCritique);
     $('btnPrint').addEventListener('click', doPrint);
     $('btnReset').addEventListener('click', doReset);
@@ -850,6 +1117,7 @@
     updatePasteStat();
     buildTweaksProtocol();
     restoreDraft();
+    bindReportClicks();
 
     log('Mesa lista. Configura IA y carga texto.', 'ok');
   }

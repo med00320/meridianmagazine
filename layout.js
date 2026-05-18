@@ -56,8 +56,9 @@
       ? `<div class="rep-fr-arrow">↳</div>
          <div class="rep-fr-prop">${escapeHtml(f.propuesta)}</div>`
       : '';
+    const fuentesHtml = renderFuentesBlock(f._fuentes);
     return `
-      <article class="rep-fr">
+      <article class="rep-fr" data-fr-idx="${i}">
         <header class="rep-fr-head">
           <span class="rep-fr-num">${String(i + 1).padStart(2, '0')}</span>
           <span class="rep-fr-tipo">${escapeHtml(tipo)}</span>
@@ -66,8 +67,87 @@
         <blockquote class="rep-fr-cita">${escapeHtml(f.cita || '')}</blockquote>
         <p class="rep-fr-comm">${escapeHtml(f.comentario || '')}</p>
         ${propuesta}
+        <footer class="rep-fr-foot">
+          <button type="button" class="rep-fr-srcbtn" data-act="find-sources" data-fr-idx="${i}" title="Buscar fuentes (autores, obras, paralelos) que ayuden a resolver esta fricción">◇ buscar fuentes</button>
+        </footer>
+        <div class="rep-fr-sources" data-fr-sources="${i}">${fuentesHtml}</div>
       </article>`;
     }
+
+  /* ============================================================
+     BLOQUE DE FUENTES POR FRICCIÓN
+     ============================================================ */
+  function tipoFuenteLabel(t) {
+    const map = {
+      cita_autoridad: 'cita de autoridad',
+      contraejemplo:  'contraejemplo',
+      paralelo:       'paralelo',
+      factual:        'factual'
+    };
+    return map[t] || t || 'paralelo';
+  }
+
+  function renderFuentesBlock(state) {
+    if (!state) return '';
+    if (state.loading) {
+      return `
+        <div class="rep-srcs">
+          <div class="rep-srcs-head">
+            <span class="rep-srcs-kicker">FUENTES SUGERIDAS</span>
+            <span class="rep-srcs-status">buscando…</span>
+          </div>
+          <div class="rep-srcs-loading">◇ ◇ ◇</div>
+        </div>`;
+    }
+    if (state.error) {
+      return `
+        <div class="rep-srcs error">
+          <div class="rep-srcs-head">
+            <span class="rep-srcs-kicker">FUENTES · ERROR</span>
+            <button type="button" class="rep-srcs-action" data-act="retry-sources" data-fr-idx="${state.idx}">↻ reintentar</button>
+            <button type="button" class="rep-srcs-action" data-act="dismiss-sources" data-fr-idx="${state.idx}">× cerrar</button>
+          </div>
+          <pre class="rep-srcs-err">${escapeHtml(state.error)}</pre>
+        </div>`;
+    }
+    const data = state.data;
+    if (!data) return '';
+    const items = (data.fuentes || []).map((s, n) => `
+      <article class="rep-src" data-cert="${escapeHtml(s.certeza || 'media')}">
+        <header class="rep-src-head">
+          <span class="rep-src-n">${String(n + 1).padStart(2, '0')}</span>
+          <span class="rep-src-tipo">${escapeHtml(tipoFuenteLabel(s.tipo))}</span>
+          <span class="rep-src-cert" title="Certeza autodeclarada por el modelo">cert. ${escapeHtml(s.certeza || 'media')}</span>
+        </header>
+        <div class="rep-src-ref">
+          <strong>${escapeHtml(s.autor || '—')}</strong>
+          ${s.obra ? `, <em>${escapeHtml(s.obra)}</em>` : ''}
+          ${s['año'] && s['año'] !== '—' ? ` <span class="rep-src-anyo">(${escapeHtml(s['año'])})</span>` : ''}
+        </div>
+        ${s.fragmento_o_idea ? `<blockquote class="rep-src-frag">${escapeHtml(s.fragmento_o_idea)}</blockquote>` : ''}
+        ${s.porque ? `<p class="rep-src-why"><span class="rep-src-why-lbl">↳ por qué</span> ${escapeHtml(s.porque)}</p>` : ''}
+      </article>`).join('');
+
+    const empty = !items
+      ? `<p class="rep-srcs-empty">${escapeHtml(data.nota_general || 'El modelo no ha encontrado fuentes útiles para esta fricción.')}</p>`
+      : '';
+    const nota = items && data.nota_general
+      ? `<p class="rep-srcs-note">${escapeHtml(data.nota_general)}</p>`
+      : '';
+    const provider = state.providerLabel ? `<span class="rep-srcs-prov">vía ${escapeHtml(state.providerLabel)}</span>` : '';
+
+    return `
+      <div class="rep-srcs">
+        <div class="rep-srcs-head">
+          <span class="rep-srcs-kicker">FUENTES SUGERIDAS</span>
+          ${provider}
+          <button type="button" class="rep-srcs-action" data-act="retry-sources" data-fr-idx="${state.idx}" title="Volver a pedir fuentes">↻ regenerar</button>
+          <button type="button" class="rep-srcs-action" data-act="dismiss-sources" data-fr-idx="${state.idx}" title="Quitar fuentes de esta fricción">× cerrar</button>
+        </div>
+        ${items}${empty}${nota}
+        <div class="rep-srcs-warn">⚠ Las fuentes salen de la memoria del modelo, no de búsqueda web. Verifica autoría, edición y atribución antes de citar.</div>
+      </div>`;
+  }
 
   /* ============================================================
      RENDER PRINCIPAL · usa data-variant para conmutar visuales
@@ -169,5 +249,5 @@
       </article>`;
   }
 
-  global.MesaLayout = { render, escapeHtml, verdictoMeta };
+  global.MesaLayout = { render, escapeHtml, verdictoMeta, renderFuentesBlock };
 })(window);
