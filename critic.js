@@ -149,10 +149,24 @@
   }
 
   async function formatHttpError(label, res) {
+    // Lee el cuerpo UNA SOLA VEZ como texto. Si parece JSON, lo intentamos
+    // parsear desde el string para extraer el mensaje legible. Si no, dejamos
+    // el texto tal cual. Antes hacíamos res.json() y, si fallaba, res.text()
+    // sobre el mismo response ya consumido — lo que disparaba
+    // "body stream already read" y enmascaraba el error real.
     let detail = '';
-    try { const j = await res.json(); detail = j?.error?.message || j?.error || JSON.stringify(j); }
-    catch { detail = await res.text(); }
-    return `${label} · HTTP ${res.status}: ${typeof detail === 'string' ? detail : JSON.stringify(detail)}`;
+    try { detail = await res.text(); } catch { detail = ''; }
+    if (detail) {
+      const trimmed = detail.trim();
+      if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+        try {
+          const j = JSON.parse(trimmed);
+          detail = j?.error?.message || j?.error || JSON.stringify(j);
+        } catch { /* deja detail como texto plano */ }
+      }
+    }
+    if (typeof detail !== 'string') detail = JSON.stringify(detail);
+    return `${label} · HTTP ${res.status}: ${detail || '(respuesta vacía)'}`;
   }
 
   /* ============================================================
