@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Meridian · Triage de medios</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+  href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
+  rel="stylesheet"
+/>
+
+<script>
+(function () {
+  var prevent = function (e) { e.preventDefault(); };
+  ['dragenter','dragover','dragleave','drop'].forEach(function (ev) {
+    window.addEventListener(ev, prevent, false);
+  });
+})();
+</script>
+
+<!-- pdf.js (UMD, compatible con file://) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+  if (window.pdfjsLib && window.pdfjsLib.GlobalWorkerOptions) {
+    window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+      'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  }
+</script>
+
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body class="app">
+
+<!-- ============================================================
+     HEADER
+     ============================================================ -->
+<header class="app-header" data-screen-label="Header">
+  <div class="hdr-left">
+    <div class="wordmark">Meridian</div>
+    <div class="claim">TRIAGE DE MEDIOS · DOSSIERES DE RESEÑAS · v1</div>
+  </div>
+  <div class="hdr-right">
+    <span class="claude-badge" id="aiBadge" title="Pulsa para configurar la IA">IA · comprobando…</span>
+    <button class="hdr-btn ghost" id="btnReset" type="button">Vaciar</button>
+    <button class="hdr-btn" id="btnPrint" type="button" disabled>Imprimir A5</button>
+  </div>
+</header>
+
+<!-- ============================================================
+     WORKSPACE
+     ============================================================ -->
+<div class="workspace triage">
+
+  <!-- COLUMNA IZQUIERDA · número y fichero -->
+  <aside class="sidebar triage-left" data-screen-label="Número">
+    <section class="side-block">
+      <h2 class="kicker">Número a triar</h2>
+      <p class="helper">Carga el PDF del número. Marca a mano los rangos de las reseñas que quieres procesar; la IA producirá una ficha por cada una.</p>
+
+      <label class="dropzone" id="dropzone" tabindex="0">
+        <input id="fileInput" type="file" accept=".pdf,application/pdf" hidden />
+        <strong>Arrastra el PDF</strong>
+        <span>o pulsa para elegir</span>
+        <em class="dz-formats">PDF DIGITAL · sin OCR</em>
+      </label>
+
+      <div class="src-card-wrap" id="srcCardWrap" hidden>
+        <div class="src-card">
+          <div class="src-kind" id="srcKind">PDF</div>
+          <button class="src-rm" id="srcRm" type="button" title="Eliminar fuente">×</button>
+          <div class="src-name" id="srcName">—</div>
+          <div class="src-meta" id="srcMeta">—</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="side-block">
+      <h2 class="kicker">Datos del medio</h2>
+      <div class="field">
+        <label for="metaMedio">Medio</label>
+        <select id="metaMedio">
+          <option value="">— Elige medio —</option>
+          <option value="NYRB">The New York Review of Books</option>
+          <option value="TLS">The Times Literary Supplement</option>
+          <option value="LRB">London Review of Books</option>
+          <option value="NR">The New Republic</option>
+          <option value="FA">Foreign Affairs</option>
+          <option value="NYer">The New Yorker</option>
+          <option value="HARP">Harper's Magazine</option>
+          <option value="ATL">The Atlantic</option>
+          <option value="OTRO">Otro (especifícalo)</option>
+        </select>
+      </div>
+      <div class="field" id="metaMedioOtroWrap" hidden>
+        <label for="metaMedioOtro">Nombre del medio</label>
+        <input id="metaMedioOtro" type="text" placeholder="Ej. The Baffler" />
+      </div>
+      <div class="field">
+        <label for="metaNumero">Volumen / número</label>
+        <input id="metaNumero" type="text" placeholder="Vol. LXX · n.º 8" />
+      </div>
+      <div class="field">
+        <label for="metaFecha">Fecha del número</label>
+        <input id="metaFecha" type="text" placeholder="17 de octubre de 2024" />
+      </div>
+      <div class="field">
+        <label for="metaUrl">URL del medio (opcional)</label>
+        <input id="metaUrl" type="text" placeholder="https://www.nybooks.com/issues/2024/10/17/" />
+      </div>
+    </section>
+
+    <section class="side-block log-block">
+      <h2 class="kicker">Registro</h2>
+      <div class="log-box" id="logBox"></div>
+    </section>
+  </aside>
+
+  <!-- COLUMNA CENTRAL · paginas + reseñas marcadas + dossier -->
+  <main class="main-col">
+
+    <div class="action-bar">
+      <div class="ab-left">
+        <button class="btn primary big" id="btnRunAll" type="button" disabled>
+          <span class="bp-mark">◆</span>
+          <span class="bp-label">Generar fichas</span>
+        </button>
+        <span class="am-pill" id="amPicked">0 reseñas marcadas</span>
+      </div>
+      <div class="action-meta">
+        <span class="am-pill" id="amProvider">— sin IA —</span>
+        <span class="am-pill" id="amLang">es-ES peninsular</span>
+      </div>
+    </div>
+
+    <!-- BLOQUE 1 · navegación de páginas + marcado -->
+    <section class="t-block t-pages-block" id="pagesBlock" hidden>
+      <header class="t-block-h">
+        <h2 class="t-h2">Páginas del número</h2>
+        <div class="t-block-h-actions">
+          <button class="btn ghost small" id="btnAddRange" type="button" disabled>+ Marcar reseña sobre la selección</button>
+          <span class="t-hint" id="pickHint">Selecciona páginas inicial y final.</span>
+        </div>
+      </header>
+      <div class="t-pages-grid" id="pagesGrid">
+        <!-- thumbnails dinamicos -->
+      </div>
+    </section>
+
+    <!-- BLOQUE 2 · listado de reseñas marcadas -->
+    <section class="t-block t-picks-block" id="picksBlock" hidden>
+      <header class="t-block-h">
+        <h2 class="t-h2">Reseñas marcadas</h2>
+        <span class="t-hint">Edita título, autor del libro y crítico antes de generar las fichas.</span>
+      </header>
+      <div class="t-picks" id="picksList"></div>
+    </section>
+
+    <!-- BLOQUE 3 · dossier (fichas generadas) -->
+    <section class="t-block t-dossier-block" id="dossierBlock" hidden>
+      <header class="t-block-h">
+        <h2 class="t-h2">Dossier de reseñas Meridian</h2>
+        <div class="t-block-h-actions">
+          <button class="btn ghost" id="btnExportMd" type="button">↓ Descargar dossier .md</button>
+          <button class="btn ghost small" id="btnExportJson" type="button">↓ JSON</button>
+        </div>
+      </header>
+      <div class="t-dossier" id="dossierFrame"></div>
+    </section>
+
+    <!-- empty state -->
+    <div class="empty-state" id="emptyState">
+      <div class="empty-mark">◆</div>
+      <h3>El triaje aguarda número</h3>
+      <p>Carga un PDF de NYRB / TLS / LRB / NR / FA, marca los rangos de las reseñas que quieres cubrir,
+         y pulsa <em>Generar fichas</em>. Recibirás un dossier con: libro reseñado, tesis del crítico,
+         síntesis en castellano, citas seleccionadas y un hueco <em>«Meridian sobre esto»</em> para tu
+         redactor.</p>
+    </div>
+  </main>
+</div>
+
+<!-- Stage de impresión: A5 -->
+<div id="printStage" aria-hidden="true"></div>
+
+<!-- Toasts -->
+<div id="toasts" class="toast-stack" aria-live="polite"></div>
+
+<!-- ============================================================
+     SCRIPTS
+     ============================================================ -->
+<script src="pdf-extract.js"></script>
+<script src="llm.js"></script>
+<script src="dossier.js"></script>
+<script src="app.js"></script>
+
+</body>
+</html>
